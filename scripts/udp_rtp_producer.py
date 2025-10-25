@@ -131,6 +131,22 @@ class UDPRTPProducer:
                 if state[0] == Gst.StateChangeReturn.FAILURE:
                     logger.error("Pipeline failed to start!")
                     logger.error(f"State: {state[1]}, Pending: {state[2]}")
+                    
+                    # Get more detailed error information
+                    bus = self.pipeline.get_bus()
+                    if bus:
+                        message = bus.timed_pop_filtered(timeout=1 * Gst.SECOND, 
+                                                       types=Gst.MessageType.ERROR | Gst.MessageType.WARNING)
+                        if message:
+                            if message.type == Gst.MessageType.ERROR:
+                                err, debug = message.parse_error()
+                                logger.error(f"GStreamer Error: {err}")
+                                logger.error(f"Debug info: {debug}")
+                            elif message.type == Gst.MessageType.WARNING:
+                                warn, debug = message.parse_warning()
+                                logger.warning(f"GStreamer Warning: {warn}")
+                                logger.warning(f"Debug info: {debug}")
+                    
                     self.running = False
                     return
                 
