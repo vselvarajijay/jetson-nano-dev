@@ -210,6 +210,7 @@ class RTSPConsumer:
 def main():
     """Main function"""
     import os
+    import sys
     
     # Get default URL from environment variable or use default
     default_url = os.getenv('RTSP_URL', 'udp://192.168.0.237:8554')
@@ -220,8 +221,18 @@ def main():
     
     args = parser.parse_args()
     
-    # Debug: Print the URL being used
+    # Debug: Print the URL being used with proper logging
+    logger.info(f"🔗 Using stream URL: {args.url}")
     print(f"🔗 Using stream URL: {args.url}")
+    print(f"🔗 Environment RTSP_URL: {os.getenv('RTSP_URL', 'NOT SET')}")
+    print(f"🔗 Command line args: {sys.argv}")
+    
+    # Validate URL format
+    if not (args.url.startswith('rtsp://') or args.url.startswith('udp://')):
+        logger.error(f"❌ Invalid URL format: {args.url}")
+        print(f"❌ Invalid URL format: {args.url}")
+        print(f"❌ Expected format: rtsp://host:port/path or udp://host:port")
+        sys.exit(1)
     
     # Create RTSP consumer instance
     consumer = RTSPConsumer(rtsp_url=args.url)
