@@ -17,6 +17,9 @@ fi
 
 echo "✅ URL validation passed: $RTSP_URL"
 
+# Clear any arguments that might have been passed
+set --
+
 # Run the consumer with the validated URL
 # Use exec to replace the shell process and avoid argument passing issues
 # Pass the URL as an environment variable to avoid argument parsing issues

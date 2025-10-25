@@ -234,6 +234,17 @@ def main():
     elif not args.url:
         args.url = 'udp://100.94.31.62:8554'  # Updated to correct IP
     
+    # Additional check: if URL looks like a script path, force use environment variable
+    if args.url and (args.url.startswith('/app/') or args.url.endswith('.sh')):
+        print(f"⚠️  Detected script path as URL: {args.url}")
+        print("🔄 Forcing use of environment variable...")
+        if env_url:
+            args.url = env_url
+            print(f"✅ Using environment URL: {args.url}")
+        else:
+            args.url = 'udp://100.94.31.62:8554'
+            print(f"✅ Using default URL: {args.url}")
+    
     # Debug: Print the URL being used with proper logging
     print(f"🔗 Using stream URL: {args.url}")
     print(f"🔗 Environment RTSP_URL: {os.getenv('RTSP_URL', 'NOT SET')}")
