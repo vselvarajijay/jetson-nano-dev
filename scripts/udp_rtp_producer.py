@@ -43,6 +43,11 @@ class UDPRTPProducer:
         """Callback to count frames and calculate FPS"""
         self.frame_count += 1
         
+        # Debug: Print every 10th frame to confirm probe is working
+        if self.frame_count % 10 == 0:
+            print(f"🔍 Debug: Frame probe called #{self.frame_count}")
+            sys.stdout.flush()
+        
         # Calculate real-time FPS
         current_time = time.time()
         time_diff = current_time - self.last_fps_time
@@ -105,24 +110,36 @@ class UDPRTPProducer:
             
         logger.info(f"Setting up GStreamer pipeline: {pipeline_str.strip()}")
         self.pipeline = Gst.parse_launch(pipeline_str)
-        
-        # Add probe to identity element for frame counting
-        identity = self.pipeline.get_by_name("frame_counter")
-        if identity:
-            pad = identity.get_static_pad("src")
-            if pad:
-                pad.add_probe(Gst.PadProbeType.BUFFER, self.on_frame_probe)
-                logger.info("Added frame counting probe")
-        
         return self.pipeline
     
     def start_gstreamer(self):
         """Start the GStreamer pipeline in a separate thread"""
         def gst_thread():
             try:
+                # Set pipeline to PLAYING state first
                 self.pipeline.set_state(Gst.State.PLAYING)
-                loop = GLib.MainLoop()
+                
+                # Wait for pipeline to be ready
+                ret = self.pipeline.get_state(timeout=5 * Gst.SECOND)
+                if ret[0] == Gst.StateChangeReturn.FAILURE:
+                    logger.error("Failed to start pipeline")
+                    self.running = False
+                    return
+                
+                # Add probe to identity element for frame counting (after pipeline is ready)
+                identity = self.pipeline.get_by_name("frame_counter")
+                if identity:
+                    pad = identity.get_static_pad("src")
+                    if pad:
+                        pad.add_probe(Gst.PadProbeType.BUFFER, self.on_frame_probe)
+                        logger.info("Added frame counting probe")
+                    else:
+                        logger.warning("Could not get src pad from identity element")
+                else:
+                    logger.warning("Could not find identity element 'frame_counter'")
+                
                 self.running = True
+                loop = GLib.MainLoop()
                 loop.run()
             except Exception as e:
                 logger.error(f"GStreamer error: {e}")
