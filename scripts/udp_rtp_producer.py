@@ -81,11 +81,12 @@ class UDPRTPProducer:
     def setup_gstreamer_pipeline(self, source_type="v4l2", device="/dev/video4"):
         """Setup GStreamer pipeline for video capture and UDP RTP streaming"""
         if source_type == "v4l2":
-            # V4L2 source with UDP RTP streaming (no identity element for now)
+            # V4L2 source with UDP RTP streaming and frame counting
             pipeline_str = f"""
             v4l2src device={device} !
             video/x-raw,width=640,height=480,framerate=30/1 !
             videoconvert !
+            identity name=frame_counter !
             x264enc tune=zerolatency !
             rtph264pay !
             udpsink host={self.host} port={self.udp_port}
@@ -108,8 +109,17 @@ class UDPRTPProducer:
         logger.info(f"Setting up GStreamer pipeline: {pipeline_str.strip()}")
         self.pipeline = Gst.parse_launch(pipeline_str)
         
-        # TODO: Add frame counting back when pipeline is stable
-        logger.info("Pipeline created successfully (frame counting disabled for stability)")
+        # Add probe to identity element for frame counting
+        identity = self.pipeline.get_by_name("frame_counter")
+        if identity:
+            pad = identity.get_static_pad("src")
+            if pad:
+                pad.add_probe(Gst.PadProbeType.BUFFER, self.on_frame_probe)
+                logger.info("Added frame counting probe")
+            else:
+                logger.warning("Could not get src pad from identity element")
+        else:
+            logger.warning("Could not find identity element 'frame_counter'")
         
         return self.pipeline
     
@@ -191,12 +201,9 @@ class UDPRTPProducer:
             logger.info("Press Ctrl+C to stop")
             logger.info("=" * 60)
             
-            # Keep running and print periodic status
+            # Keep running (FPS stats are printed by frame probe callback)
             while self.running:
-                time.sleep(5)
-                elapsed = time.time() - self.start_time
-                print(f"📊 Producer: Stream active for {elapsed:.1f}s on {self.host}:{self.udp_port}")
-                sys.stdout.flush()
+                time.sleep(1)
                 
         except KeyboardInterrupt:
             logger.info("Shutting down...")

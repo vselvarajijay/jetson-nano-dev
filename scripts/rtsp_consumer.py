@@ -121,9 +121,23 @@ class RTSPConsumer:
             appsink emit-signals=true max-buffers=1 drop=true sync=false
             """
         else:
-            # UDP RTP source pipeline (fallback)
+            # UDP RTP source pipeline - parse URL for host and port
+            if self.rtsp_url.startswith('udp://'):
+                # Parse UDP URL: udp://host:port
+                url_parts = self.rtsp_url[6:]  # Remove 'udp://'
+                if ':' in url_parts:
+                    host, port = url_parts.split(':', 1)
+                else:
+                    host = url_parts
+                    port = "8554"
+            else:
+                host = "127.0.0.1"
+                port = "8554"
+            
+            logger.info(f"UDP connection: host={host}, port={port}")
+            
             pipeline_str = f"""
-            udpsrc port=8554 !
+            udpsrc port={port} !
             application/x-rtp,media=video,clock-rate=90000,encoding-name=H264 !
             rtph264depay !
             h264parse !
