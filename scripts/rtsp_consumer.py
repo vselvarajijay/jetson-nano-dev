@@ -106,17 +106,31 @@ class RTSPConsumer:
             print(f"💾 Saved frame: {filename}")
     
     def setup_gstreamer_pipeline(self):
-        """Setup GStreamer pipeline for RTSP consumption"""
-        # RTSP source pipeline with better error handling
-        pipeline_str = f"""
-        rtspsrc location={self.rtsp_url} latency=0 protocols=tcp !
-        rtph264depay !
-        h264parse !
-        avdec_h264 !
-        videoconvert !
-        video/x-raw,format=BGR !
-        appsink emit-signals=true max-buffers=1 drop=true sync=false
-        """
+        """Setup GStreamer pipeline for RTSP/UDP consumption"""
+        # Check if URL is RTSP or UDP
+        if self.rtsp_url.startswith('rtsp://'):
+            # RTSP source pipeline
+            pipeline_str = f"""
+            rtspsrc location={self.rtsp_url} latency=0 protocols=tcp !
+            rtph264depay !
+            h264parse !
+            avdec_h264 !
+            videoconvert !
+            video/x-raw,format=BGR !
+            appsink emit-signals=true max-buffers=1 drop=true sync=false
+            """
+        else:
+            # UDP RTP source pipeline (fallback)
+            pipeline_str = f"""
+            udpsrc port=8554 !
+            application/x-rtp,media=video,clock-rate=90000,encoding-name=H264 !
+            rtph264depay !
+            h264parse !
+            avdec_h264 !
+            videoconvert !
+            video/x-raw,format=BGR !
+            appsink emit-signals=true max-buffers=1 drop=true sync=false
+            """
         
         logger.info(f"Setting up RTSP consumer pipeline: {pipeline_str.strip()}")
         self.pipeline = Gst.parse_launch(pipeline_str)

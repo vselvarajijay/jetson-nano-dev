@@ -164,17 +164,18 @@ class RTSPProducer:
         self.media_process = subprocess.Popen(media_cmd)
     
     def start_alternative_rtsp_server(self):
-        """Alternative RTSP server using tcpserversink"""
-        logger.info("Using alternative RTSP approach with tcpserversink")
+        """Alternative RTSP server using UDP multicast"""
+        logger.info("Using alternative RTSP approach with UDP multicast")
         
-        # Create a proper RTSP server pipeline
+        # Create a UDP multicast server that can be accessed via RTSP
         rtsp_cmd = [
             "gst-launch-1.0",
             "udpsrc", "port=5004",
             "!", "application/x-rtp,media=video,clock-rate=90000,encoding-name=H264",
             "!", "rtph264depay",
             "!", "h264parse",
-            "!", "tcpserversink", f"host=0.0.0.0", f"port={self.rtsp_port}"
+            "!", "queue",
+            "!", "udpsink", f"host=0.0.0.0", f"port={self.rtsp_port}"
         ]
         
         logger.info(f"Starting alternative RTSP server: {' '.join(rtsp_cmd)}")
