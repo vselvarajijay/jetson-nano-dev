@@ -58,7 +58,8 @@ RUN apt-get update && apt-get install -y \
 
 # Install Python packages
 COPY requirements-docker.txt /tmp/requirements-docker.txt
-RUN pip3 install --no-cache-dir -r /tmp/requirements-docker.txt
+RUN pip3 install --no-cache-dir --upgrade pip && \
+    pip3 install --no-cache-dir -r /tmp/requirements-docker.txt
 
 # Create application directory
 WORKDIR /app
@@ -67,6 +68,9 @@ WORKDIR /app
 COPY scripts/rtsp_consumer.py /app/
 COPY scripts/entrypoint.sh /app/
 RUN chmod +x /app/entrypoint.sh
+
+# Verify files exist
+RUN ls -la /app/
 
 # Create directories for output
 RUN mkdir -p /app/output /app/logs
