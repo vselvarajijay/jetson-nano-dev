@@ -2,25 +2,17 @@
 # Optimized for NVIDIA DGX Spark deployment
 
 # Core Python packages
-numpy==1.24.3
-opencv-python==4.8.1.78
-
-# GStreamer Python bindings (PyGObject)
-PyGObject==3.46.0
+numpy>=1.21.0
+opencv-python>=4.5.0
 
 # Additional utilities
-Pillow==10.0.1
+Pillow>=8.0.0
 
 # Logging and monitoring
-psutil==5.9.5
+psutil>=5.8.0
 
 # Network utilities
-requests==2.31.0
+requests>=2.25.0
 
-# Optional: For enhanced video processing
-# scipy==1.11.1
-# matplotlib==3.7.2
-
-# Development and debugging (optional)
-# ipython==8.14.0
-# jupyter==1.0.0
+# Note: PyGObject is installed via system packages (python3-gi)
+# to avoid meson-python build issues

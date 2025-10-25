@@ -49,6 +49,9 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     libglib2.0-dev \
     libgirepository1.0-dev \
+    # Build tools for Python packages
+    meson \
+    ninja-build \
     # Cleanup
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
