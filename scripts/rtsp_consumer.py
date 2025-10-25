@@ -99,11 +99,11 @@ class RTSPConsumer:
               f"Intensity: μ={mean_intensity:.2f} σ={std_intensity:.2f} "
               f"[{min_intensity:.0f}-{max_intensity:.0f}]")
         
-        # Optional: Save frame every 100 frames for debugging
-        if self.frame_count % 100 == 0:
-            filename = f"frame_{self.frame_count:06d}.jpg"
-            cv2.imwrite(filename, frame)
-            print(f"💾 Saved frame: {filename}")
+        # Optional: Save frame every 100 frames for debugging (DISABLED)
+        # if self.frame_count % 100 == 0:
+        #     filename = f"frame_{self.frame_count:06d}.jpg"
+        #     cv2.imwrite(filename, frame)
+        #     print(f"💾 Saved frame: {filename}")
     
     def setup_gstreamer_pipeline(self):
         """Setup GStreamer pipeline for RTSP/UDP consumption"""
