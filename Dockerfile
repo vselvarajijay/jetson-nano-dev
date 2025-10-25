@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     curl \
     git \
-    # GStreamer packages
+    # GStreamer core packages
     libgstreamer1.0-dev \
     libgstreamer-plugins-base1.0-dev \
     libgstreamer-plugins-bad1.0-dev \
@@ -30,12 +30,6 @@ RUN apt-get update && apt-get install -y \
     gstreamer1.0-plugins-ugly \
     gstreamer1.0-libav \
     gstreamer1.0-tools \
-    gstreamer1.0-x \
-    gstreamer1.0-alsa \
-    gstreamer1.0-gl \
-    gstreamer1.0-gtk3 \
-    gstreamer1.0-qt5 \
-    gstreamer1.0-pulseaudio \
     # Python GStreamer bindings
     python3-gi \
     python3-gi-cairo \
@@ -44,25 +38,18 @@ RUN apt-get update && apt-get install -y \
     # OpenCV dependencies
     libopencv-dev \
     python3-opencv \
-    # Additional multimedia libraries
+    # Essential multimedia libraries
     libavcodec-dev \
     libavformat-dev \
     libavutil-dev \
     libswscale-dev \
     libswresample-dev \
     libx264-dev \
-    libx265-dev \
-    libvpx-dev \
-    libfdk-aac-dev \
-    libmp3lame-dev \
-    libopus-dev \
-    libvorbis-dev \
-    libtheora-dev \
-    # Network and RTSP libraries
-    libsoup2.4-dev \
+    # Network and system libraries
     libssl-dev \
     libglib2.0-dev \
     libgobject-2.0-dev \
+    libgirepository1.0-dev \
     # Cleanup
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
