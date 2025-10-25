@@ -98,6 +98,7 @@ class RTSPConsumer:
               f"FPS: {fps:.2f} | "
               f"Intensity: μ={mean_intensity:.2f} σ={std_intensity:.2f} "
               f"[{min_intensity:.0f}-{max_intensity:.0f}]")
+        sys.stdout.flush()
         
         # Optional: Save frame every 100 frames for debugging (DISABLED)
         # if self.frame_count % 100 == 0:
