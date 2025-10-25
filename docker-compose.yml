@@ -43,7 +43,7 @@ services:
       retries: 3
       start_period: 40s
     # Override default command with UDP RTP URL
-    command: ["python3", "rtsp_consumer.py", "--url", "udp://192.168.0.237:8554"]
+    command: python3 rtsp_consumer.py --url udp://192.168.0.237:8554
 
   # Optional: RTSP Producer for testing (if running locally)
   rtsp-producer:
