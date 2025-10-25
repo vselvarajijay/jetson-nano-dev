@@ -239,6 +239,18 @@ def main():
     print("=" * 60)
     sys.stdout.flush()
     
+    # Handle case where script path is passed as argument
+    if args.url and args.url.startswith('/app/'):
+        print(f"⚠️  Detected script path as URL: {args.url}")
+        print("🔄 Falling back to environment variable...")
+        env_url = os.getenv('RTSP_URL')
+        if env_url:
+            args.url = env_url
+            print(f"✅ Using environment URL: {args.url}")
+        else:
+            args.url = 'udp://100.94.31.62:8554'
+            print(f"✅ Using default URL: {args.url}")
+    
     # Validate URL format
     if not args.url:
         print("❌ No URL provided")
