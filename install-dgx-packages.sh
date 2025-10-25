@@ -27,11 +27,24 @@ sudo apt install -y \
     libgstreamer1.0-dev \
     libgstreamer-plugins-base1.0-dev \
     libgstreamer-plugins-bad1.0-dev \
-    libgstreamer-plugins-good1.0-dev
+    libgstreamer-plugins-good1.0-dev \
+    libglib2.0-dev \
+    libgirepository1.0-dev \
+    pkg-config \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libatk1.0-dev \
+    libgdk-pixbuf2.0-dev \
+    libgtk-3-dev
 
 # Install Python packages
 echo "3️⃣ Installing Python packages..."
 pip3 install --upgrade pip
+
+# Try to install PyGObject via pip (backup method)
+echo "Installing PyGObject via pip..."
+pip3 install PyGObject || echo "PyGObject installation via pip failed, using system package"
+
 pip3 install \
     numpy \
     opencv-python \
