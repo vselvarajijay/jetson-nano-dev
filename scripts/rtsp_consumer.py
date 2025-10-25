@@ -229,49 +229,30 @@ def main():
         url = 'udp://100.94.31.62:8554'
         print(f"✅ Using default URL: {url}")
     
-    # Create a simple args object for compatibility
-    class Args:
-        def __init__(self, url):
-            self.url = url
-    
-    args = Args(url)
-    
     # Debug: Print the URL being used with proper logging
-    print(f"🔗 Using stream URL: {args.url}")
+    print(f"🔗 Using stream URL: {url}")
     print(f"🔗 Environment RTSP_URL: {os.getenv('RTSP_URL', 'NOT SET')}")
     print(f"🔗 Command line args: {sys.argv}")
     print(f"🔗 Working directory: {os.getcwd()}")
     print("=" * 60)
     sys.stdout.flush()
     
-    # Handle case where script path is passed as argument
-    if args.url and args.url.startswith('/app/'):
-        print(f"⚠️  Detected script path as URL: {args.url}")
-        print("🔄 Falling back to environment variable...")
-        env_url = os.getenv('RTSP_URL')
-        if env_url:
-            args.url = env_url
-            print(f"✅ Using environment URL: {args.url}")
-        else:
-            args.url = 'udp://100.94.31.62:8554'
-            print(f"✅ Using default URL: {args.url}")
-    
     # Validate URL format
-    if not args.url:
+    if not url:
         print("❌ No URL provided")
-        print("Set RTSP_URL environment variable or use --url argument")
+        print("Set RTSP_URL environment variable")
         sys.exit(1)
     
-    if not (args.url.startswith('rtsp://') or args.url.startswith('udp://')):
-        print(f"❌ Invalid URL format: {args.url}")
+    if not (url.startswith('rtsp://') or url.startswith('udp://')):
+        print(f"❌ Invalid URL format: {url}")
         print(f"❌ Expected format: rtsp://host:port/path or udp://host:port")
         sys.exit(1)
     
-    print(f"✅ URL validation passed: {args.url}")
+    print(f"✅ URL validation passed: {url}")
     sys.stdout.flush()
     
     # Create RTSP consumer instance
-    consumer = RTSPConsumer(rtsp_url=args.url)
+    consumer = RTSPConsumer(rtsp_url=url)
     
     # Run the consumer
     consumer.run()
