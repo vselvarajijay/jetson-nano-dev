@@ -212,14 +212,18 @@ def main():
     import os
     import sys
     
-    # Get default URL from environment variable or use default
-    default_url = os.getenv('RTSP_URL', 'udp://192.168.0.237:8554')
+    # Get URL from environment variable first, then command line args
+    env_url = os.getenv('RTSP_URL')
     
     parser = argparse.ArgumentParser(description='RTSP Consumer')
-    parser.add_argument('--url', default=default_url,
-                       help='RTSP/UDP stream URL (default: udp://192.168.0.237:8554 or RTSP_URL env var)')
+    parser.add_argument('--url', default=env_url,
+                       help='RTSP/UDP stream URL (default: RTSP_URL env var)')
     
     args = parser.parse_args()
+    
+    # If no URL provided via args or env, use default
+    if not args.url:
+        args.url = 'udp://192.168.0.237:8554'
     
     # Debug: Print the URL being used with proper logging
     logger.info(f"🔗 Using stream URL: {args.url}")

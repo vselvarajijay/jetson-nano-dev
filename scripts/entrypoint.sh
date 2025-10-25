@@ -29,14 +29,14 @@ check_cuda() {
     fi
 }
 
-# Function to validate RTSP URL
-validate_rtsp_url() {
+# Function to validate stream URL (RTSP or UDP)
+validate_stream_url() {
     local url=$1
-    if [[ $url =~ ^rtsp:// ]]; then
-        echo "✅ RTSP URL format is valid: $url"
+    if [[ $url =~ ^rtsp:// ]] || [[ $url =~ ^udp:// ]]; then
+        echo "✅ Stream URL format is valid: $url"
     else
-        echo "❌ Invalid RTSP URL format: $url"
-        echo "Expected format: rtsp://host:port/path"
+        echo "❌ Invalid stream URL format: $url"
+        echo "Expected format: rtsp://host:port/path or udp://host:port"
         exit 1
     fi
 }
@@ -67,9 +67,9 @@ main() {
     check_gstreamer
     check_cuda
     
-    # Validate RTSP URL if provided
+    # Validate stream URL if provided
     if [ $# -gt 0 ]; then
-        validate_rtsp_url "$1"
+        validate_stream_url "$1"
         test_connectivity "$1"
     fi
     
