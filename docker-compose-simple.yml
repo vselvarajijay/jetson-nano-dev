@@ -17,7 +17,7 @@ services:
       - ./output:/app/output
       - ./logs:/app/logs
     restart: unless-stopped
-    command: python3 rtsp_consumer.py --url udp://192.168.0.237:8554
+    command: ["python3", "rtsp_consumer.py", "--url", "udp://192.168.0.237:8554"]
     healthcheck:
       test: ["CMD", "python3", "-c", "import gi; gi.require_version('Gst', '1.0'); from gi.repository import Gst; Gst.init(None)"]
       interval: 30s
