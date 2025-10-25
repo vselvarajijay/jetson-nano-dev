@@ -36,6 +36,32 @@ class UDPRTPProducer:
         self.running = False
         self.frame_count = 0
         self.start_time = time.time()
+        self.last_fps_time = time.time()
+        self.last_fps_count = 0
+        
+    def on_frame_probe(self, pad, info):
+        """Callback to count frames and calculate FPS"""
+        self.frame_count += 1
+        
+        # Calculate real-time FPS
+        current_time = time.time()
+        time_diff = current_time - self.last_fps_time
+        
+        if time_diff >= 1.0:  # Update FPS every second
+            fps = (self.frame_count - self.last_fps_count) / time_diff
+            self.last_fps_time = current_time
+            self.last_fps_count = self.frame_count
+            
+            # Print FPS stats
+            elapsed = current_time - self.start_time
+            avg_fps = self.frame_count / elapsed
+            print(f"🎥 Producer Frame #{self.frame_count:06d} | "
+                  f"Real-time FPS: {fps:.2f} | "
+                  f"Avg FPS: {avg_fps:.2f} | "
+                  f"Runtime: {elapsed:.1f}s")
+            sys.stdout.flush()
+        
+        return Gst.PadProbeReturn.OK
         
     def get_local_ip(self):
         """Get local IP address for network access"""
@@ -50,23 +76,25 @@ class UDPRTPProducer:
     def setup_gstreamer_pipeline(self, source_type="v4l2", device="/dev/video4"):
         """Setup GStreamer pipeline for video capture and UDP RTP streaming"""
         if source_type == "v4l2":
-            # V4L2 source with UDP RTP streaming
+            # V4L2 source with UDP RTP streaming and frame counting
             pipeline_str = f"""
             v4l2src device={device} io-mode=2 !
             video/x-raw,format=YUY2,width=640,height=480,framerate=30/1 !
             videoconvert !
             video/x-raw,format=I420 !
+            identity name=frame_counter !
             x264enc tune=zerolatency bitrate=2000 !
             rtph264pay name=pay0 pt=96 !
             udpsink host={self.host} port={self.udp_port}
             """
         elif source_type == "deepstream":
-            # DeepStream pipeline with UDP RTP streaming
+            # DeepStream pipeline with UDP RTP streaming and frame counting
             pipeline_str = f"""
             nvarguscamerasrc !
             video/x-raw(memory:NVMM),width=640,height=480,format=NV12,framerate=30/1 !
             nvvidconv !
             video/x-raw,format=I420 !
+            identity name=frame_counter !
             nvv4l2h264enc bitrate=2000 !
             h264parse !
             rtph264pay name=pay0 pt=96 !
@@ -77,6 +105,15 @@ class UDPRTPProducer:
             
         logger.info(f"Setting up GStreamer pipeline: {pipeline_str.strip()}")
         self.pipeline = Gst.parse_launch(pipeline_str)
+        
+        # Add probe to identity element for frame counting
+        identity = self.pipeline.get_by_name("frame_counter")
+        if identity:
+            pad = identity.get_static_pad("src")
+            if pad:
+                pad.add_probe(Gst.PadProbeType.BUFFER, self.on_frame_probe)
+                logger.info("Added frame counting probe")
+        
         return self.pipeline
     
     def start_gstreamer(self):
@@ -124,14 +161,9 @@ class UDPRTPProducer:
             logger.info("Press Ctrl+C to stop")
             logger.info("=" * 60)
             
-            # Keep running and print periodic stats
+            # Keep running (FPS stats are printed by frame probe callback)
             while self.running:
-                time.sleep(10)
-                if self.frame_count > 0:
-                    elapsed = time.time() - self.start_time
-                    avg_fps = self.frame_count / elapsed
-                    print(f"📊 Producer Stats: {self.frame_count} frames streamed, "
-                          f"Avg FPS: {avg_fps:.2f}, Runtime: {elapsed:.1f}s")
+                time.sleep(1)
                 
         except KeyboardInterrupt:
             logger.info("Shutting down...")
