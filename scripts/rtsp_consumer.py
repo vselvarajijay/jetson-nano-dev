@@ -34,6 +34,8 @@ class RTSPConsumer:
         self.start_time = time.time()
         self.last_fps_time = time.time()
         self.last_fps_count = 0
+        self.last_frame_time = time.time()
+        self.stream_timeout = 5.0  # seconds without frames before considering stream dead
         
     def on_new_sample(self, sink):
         """Callback function for new video samples from GStreamer"""
@@ -73,6 +75,7 @@ class RTSPConsumer:
     def process_frame(self, frame):
         """Process frame and print statistics"""
         self.frame_count += 1
+        self.last_frame_time = time.time()  # Update last frame time
         
         # Convert to grayscale for analysis
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -128,6 +131,23 @@ class RTSPConsumer:
             logger.info("Stream started")
         elif message.type == Gst.MessageType.EOS:
             logger.info("End of stream")
+    
+    def check_stream_health(self):
+        """Check if stream is still active by monitoring frame reception"""
+        current_time = time.time()
+        time_since_last_frame = current_time - self.last_frame_time
+        
+        if time_since_last_frame > self.stream_timeout:
+            if self.frame_count > 0:
+                logger.warning(f"⚠️  No frames received for {time_since_last_frame:.1f}s - stream may be dead")
+                logger.warning(f"   Last frame was #{self.frame_count} at {self.last_frame_time:.1f}")
+                logger.warning(f"   Current time: {current_time:.1f}")
+            else:
+                logger.warning(f"⚠️  No frames received yet after {time_since_last_frame:.1f}s")
+                logger.warning(f"   Producer may not be running or network issue")
+            return False
+        
+        return True
     
     def setup_gstreamer_pipeline(self):
         """Setup GStreamer pipeline for RTSP/UDP consumption"""
@@ -225,14 +245,26 @@ class RTSPConsumer:
             logger.info("Processing frames... Press Ctrl+C to stop")
             logger.info("=" * 60)
             
-            # Keep running and print periodic stats
+            # Keep running and monitor stream health
             while self.running:
-                time.sleep(5)
+                time.sleep(2)  # Check more frequently
+                
+                # Check stream health
+                if not self.check_stream_health():
+                    logger.error("❌ Stream appears to be dead - stopping consumer")
+                    break
+                
+                # Print periodic stats
                 if self.frame_count > 0:
                     elapsed = time.time() - self.start_time
                     avg_fps = self.frame_count / elapsed
+                    time_since_last = time.time() - self.last_frame_time
                     print(f"📊 Consumer Stats: {self.frame_count} frames processed, "
-                          f"Avg FPS: {avg_fps:.2f}, Runtime: {elapsed:.1f}s")
+                          f"Avg FPS: {avg_fps:.2f}, Runtime: {elapsed:.1f}s, "
+                          f"Last frame: {time_since_last:.1f}s ago")
+                else:
+                    elapsed = time.time() - self.start_time
+                    print(f"⏳ Waiting for frames... Runtime: {elapsed:.1f}s")
                 
         except KeyboardInterrupt:
             logger.info("Shutting down...")
