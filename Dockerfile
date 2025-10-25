@@ -86,4 +86,4 @@ EXPOSE 8080
 ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Default command
-CMD ["python3", "rtsp_consumer.py", "--url", "rtsp://host.docker.internal:8554/test"]
+CMD ["python3", "rtsp_consumer.py"]

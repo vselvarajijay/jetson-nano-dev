@@ -12,7 +12,7 @@ services:
       - NVIDIA_DRIVER_CAPABILITIES=all
       - GST_DEBUG=2
       - PYTHONUNBUFFERED=1
-      - RTSP_URL=rtsp://host.docker.internal:8554/test  # Default RTSP URL
+      - RTSP_URL=rtsp://192.168.0.237:8554/test  # Jetson local network IP
     volumes:
       # Mount output directory for saving frames
       - ./output:/app/output
@@ -43,7 +43,7 @@ services:
       retries: 3
       start_period: 40s
     # Override default command with RTSP URL
-    command: ["python3", "rtsp_consumer.py", "--url", "rtsp://host.docker.internal:8554/test"]
+    command: ["python3", "rtsp_consumer.py", "--url", "rtsp://192.168.0.237:8554/test"]
 
   # Optional: RTSP Producer for testing (if running locally)
   rtsp-producer:

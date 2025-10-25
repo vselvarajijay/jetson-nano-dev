@@ -167,11 +167,14 @@ class RTSPProducer:
         """Alternative RTSP server using tcpserversink"""
         logger.info("Using alternative RTSP approach with tcpserversink")
         
-        # Create a simple RTSP server using tcpserversink
+        # Create a proper RTSP server pipeline
         rtsp_cmd = [
             "gst-launch-1.0",
-            "tcpserversink", f"host=0.0.0.0", f"port={self.rtsp_port}",
-            "!", "rtspclientsink", f"location=rtsp://0.0.0.0:{self.rtsp_port}{self.rtsp_path}"
+            "udpsrc", "port=5004",
+            "!", "application/x-rtp,media=video,clock-rate=90000,encoding-name=H264",
+            "!", "rtph264depay",
+            "!", "h264parse",
+            "!", "tcpserversink", f"host=0.0.0.0", f"port={self.rtsp_port}"
         ]
         
         logger.info(f"Starting alternative RTSP server: {' '.join(rtsp_cmd)}")
