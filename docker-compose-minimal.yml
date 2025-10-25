@@ -14,4 +14,4 @@ services:
       - PYTHONUNBUFFERED=1
       - RTSP_URL=udp://100.94.31.62:8554
     restart: unless-stopped
-    command: /app/run_consumer.sh
+    command: ["/app/run_consumer.sh"]

@@ -19,4 +19,6 @@ echo "✅ URL validation passed: $RTSP_URL"
 
 # Run the consumer with the validated URL
 # Use exec to replace the shell process and avoid argument passing issues
-exec python3 rtsp_consumer.py --url "$RTSP_URL"
+# Pass the URL as an environment variable to avoid argument parsing issues
+export RTSP_URL="$RTSP_URL"
+exec python3 rtsp_consumer.py

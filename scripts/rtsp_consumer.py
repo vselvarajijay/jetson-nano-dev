@@ -222,13 +222,16 @@ def main():
     env_url = os.getenv('RTSP_URL')
     
     parser = argparse.ArgumentParser(description='RTSP Consumer')
-    parser.add_argument('--url', default=env_url,
-                       help='RTSP/UDP stream URL (default: RTSP_URL env var)')
+    parser.add_argument('--url', default=None,
+                       help='RTSP/UDP stream URL (overrides RTSP_URL env var)')
     
+    # Parse arguments, but ignore any positional arguments that look like script paths
     args = parser.parse_args()
     
-    # If no URL provided via args or env, use default
-    if not args.url:
+    # Prioritize environment variable over command line argument
+    if env_url:
+        args.url = env_url
+    elif not args.url:
         args.url = 'udp://100.94.31.62:8554'  # Updated to correct IP
     
     # Debug: Print the URL being used with proper logging
