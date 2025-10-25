@@ -81,14 +81,14 @@ class UDPRTPProducer:
     def setup_gstreamer_pipeline(self, source_type="v4l2", device="/dev/video4"):
         """Setup GStreamer pipeline for video capture and UDP RTP streaming"""
         if source_type == "v4l2":
-            # V4L2 source with UDP RTP streaming and frame counting
+            # V4L2 source with UDP RTP streaming and frame counting (simplified)
             pipeline_str = f"""
             v4l2src device={device} !
             video/x-raw,width=640,height=480,framerate=30/1 !
             videoconvert !
             identity name=frame_counter !
-            x264enc tune=zerolatency bitrate=2000 !
-            rtph264pay pt=96 !
+            x264enc tune=zerolatency !
+            rtph264pay !
             udpsink host={self.host} port={self.udp_port}
             """
         elif source_type == "deepstream":
@@ -133,6 +133,12 @@ class UDPRTPProducer:
                 # Check pipeline state
                 state = self.pipeline.get_state(timeout=2 * Gst.SECOND)
                 logger.info(f"Pipeline state: {state}")
+                
+                if state[0] == Gst.StateChangeReturn.FAILURE:
+                    logger.error("Pipeline failed to start!")
+                    logger.error(f"State: {state[1]}, Pending: {state[2]}")
+                    self.running = False
+                    return
                 
                 self.running = True
                 loop = GLib.MainLoop()
