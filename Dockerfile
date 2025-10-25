@@ -72,8 +72,8 @@ RUN chmod +x /app/entrypoint.sh
 # Verify files exist
 RUN ls -la /app/
 
-# Create directories for output
-RUN mkdir -p /app/output /app/logs
+# Create directories for output (optional)
+RUN mkdir -p /app/output /app/logs || true
 
 # Set up GStreamer environment
 RUN echo 'export GST_PLUGIN_PATH=/usr/lib/x86_64-linux-gnu/gstreamer-1.0' >> /etc/environment
