@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  test-env:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: test-docker-env
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - GST_DEBUG=2
+      - PYTHONUNBUFFERED=1
+      - RTSP_URL=udp://100.94.31.62:8554
+    command: python3 test_docker_env.py
+
+  rtsp-consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rtsp-consumer-debug
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - GST_DEBUG=2
+      - PYTHONUNBUFFERED=1
+      - RTSP_URL=udp://100.94.31.62:8554
+    command: python3 rtsp_consumer.py
+    depends_on:
+      - test-env
