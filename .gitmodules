@@ -1,0 +1,3 @@
+[submodule "installRealSenseSDK"]
+	path = installRealSenseSDK
+	url = https://github.com/jetsonhacks/installRealSenseSDK.git
