@@ -12,7 +12,7 @@ services:
       - NVIDIA_DRIVER_CAPABILITIES=all
       - GST_DEBUG=2
       - PYTHONUNBUFFERED=1
-      - RTSP_URL=udp://192.168.0.237:8554
+      - RTSP_URL=udp://100.94.31.62:8554
     restart: unless-stopped
     # Use environment variable instead of command line args to avoid parsing issues
     # command: ["python3", "rtsp_consumer.py", "--url", "udp://192.168.0.237:8554"]
