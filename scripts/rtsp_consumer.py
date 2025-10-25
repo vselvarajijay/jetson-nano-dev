@@ -39,7 +39,10 @@ class RTSPConsumer:
         """Callback function for new video samples from GStreamer"""
         sample = sink.emit("pull-sample")
         if not sample:
+            logger.warning("No sample received from appsink")
             return Gst.FlowReturn.ERROR
+        
+        logger.debug(f"Received sample: {sample}")
             
         buf = sample.get_buffer()
         caps = sample.get_caps()
@@ -107,6 +110,25 @@ class RTSPConsumer:
         #     cv2.imwrite(filename, frame)
         #     print(f"💾 Saved frame: {filename}")
     
+    def on_bus_message(self, bus, message):
+        """Handle GStreamer bus messages for debugging"""
+        if message.type == Gst.MessageType.ERROR:
+            err, debug = message.parse_error()
+            logger.error(f"GStreamer Error: {err}")
+            logger.error(f"Debug info: {debug}")
+        elif message.type == Gst.MessageType.WARNING:
+            warn, debug = message.parse_warning()
+            logger.warning(f"GStreamer Warning: {warn}")
+            logger.warning(f"Debug info: {debug}")
+        elif message.type == Gst.MessageType.STATE_CHANGED:
+            old_state, new_state, pending_state = message.parse_state_changed()
+            if message.src == self.pipeline:
+                logger.info(f"Pipeline state changed: {old_state.value_nick} -> {new_state.value_nick}")
+        elif message.type == Gst.MessageType.STREAM_START:
+            logger.info("Stream started")
+        elif message.type == Gst.MessageType.EOS:
+            logger.info("End of stream")
+    
     def setup_gstreamer_pipeline(self):
         """Setup GStreamer pipeline for RTSP/UDP consumption"""
         # Check if URL is RTSP or UDP
@@ -150,6 +172,11 @@ class RTSPConsumer:
         
         logger.info(f"Setting up RTSP consumer pipeline: {pipeline_str.strip()}")
         self.pipeline = Gst.parse_launch(pipeline_str)
+        
+        # Add bus message handler for debugging
+        bus = self.pipeline.get_bus()
+        bus.add_signal_watch()
+        bus.connect("message", self.on_bus_message)
         
         # Get appsink element
         appsink = self.pipeline.get_by_interface(GstApp.AppSink)
