@@ -161,7 +161,7 @@ class RTSPConsumer:
             
             pipeline_str = f"""
             udpsrc port={port} !
-            application/x-rtp,media=video,clock-rate=90000,encoding-name=H264 !
+            application/x-rtp !
             rtph264depay !
             h264parse !
             avdec_h264 !
