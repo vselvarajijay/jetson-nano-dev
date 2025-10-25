@@ -18,10 +18,10 @@ if [ $? -eq 0 ]; then
         -e NVIDIA_DRIVER_CAPABILITIES=all \
         -e GST_DEBUG=2 \
         -e PYTHONUNBUFFERED=1 \
-        -e RTSP_URL=udp://192.168.0.237:8554 \
+        -e RTSP_URL=udp://100.94.31.62:8554 \
         --name rtsp-consumer-manual \
         rtsp-consumer-dgx \
-        python3 rtsp_consumer.py --url udp://192.168.0.237:8554
+        python3 rtsp_consumer.py
 else
     echo "❌ Build failed!"
     exit 1
