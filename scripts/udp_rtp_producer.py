@@ -81,28 +81,24 @@ class UDPRTPProducer:
     def setup_gstreamer_pipeline(self, source_type="v4l2", device="/dev/video4"):
         """Setup GStreamer pipeline for video capture and UDP RTP streaming"""
         if source_type == "v4l2":
-            # V4L2 source with UDP RTP streaming and frame counting
+            # V4L2 source with UDP RTP streaming (simplified)
             pipeline_str = f"""
-            v4l2src device={device} io-mode=2 !
-            video/x-raw,format=YUY2,width=640,height=480,framerate=30/1 !
+            v4l2src device={device} !
+            video/x-raw,width=640,height=480,framerate=30/1 !
             videoconvert !
-            video/x-raw,format=I420 !
-            identity name=frame_counter !
             x264enc tune=zerolatency bitrate=2000 !
-            rtph264pay name=pay0 pt=96 !
+            rtph264pay pt=96 !
             udpsink host={self.host} port={self.udp_port}
             """
         elif source_type == "deepstream":
-            # DeepStream pipeline with UDP RTP streaming and frame counting
+            # DeepStream pipeline with UDP RTP streaming (simplified)
             pipeline_str = f"""
             nvarguscamerasrc !
             video/x-raw(memory:NVMM),width=640,height=480,format=NV12,framerate=30/1 !
             nvvidconv !
-            video/x-raw,format=I420 !
-            identity name=frame_counter !
             nvv4l2h264enc bitrate=2000 !
             h264parse !
-            rtph264pay name=pay0 pt=96 !
+            rtph264pay pt=96 !
             udpsink host={self.host} port={self.udp_port}
             """
         else:
@@ -116,30 +112,9 @@ class UDPRTPProducer:
         """Start the GStreamer pipeline in a separate thread"""
         def gst_thread():
             try:
-                # Set pipeline to PLAYING state first
                 self.pipeline.set_state(Gst.State.PLAYING)
-                
-                # Wait for pipeline to be ready
-                ret = self.pipeline.get_state(timeout=5 * Gst.SECOND)
-                if ret[0] == Gst.StateChangeReturn.FAILURE:
-                    logger.error("Failed to start pipeline")
-                    self.running = False
-                    return
-                
-                # Add probe to identity element for frame counting (after pipeline is ready)
-                identity = self.pipeline.get_by_name("frame_counter")
-                if identity:
-                    pad = identity.get_static_pad("src")
-                    if pad:
-                        pad.add_probe(Gst.PadProbeType.BUFFER, self.on_frame_probe)
-                        logger.info("Added frame counting probe")
-                    else:
-                        logger.warning("Could not get src pad from identity element")
-                else:
-                    logger.warning("Could not find identity element 'frame_counter'")
-                
-                self.running = True
                 loop = GLib.MainLoop()
+                self.running = True
                 loop.run()
             except Exception as e:
                 logger.error(f"GStreamer error: {e}")
@@ -178,9 +153,12 @@ class UDPRTPProducer:
             logger.info("Press Ctrl+C to stop")
             logger.info("=" * 60)
             
-            # Keep running (FPS stats are printed by frame probe callback)
+            # Keep running and print periodic stats
             while self.running:
-                time.sleep(1)
+                time.sleep(5)
+                elapsed = time.time() - self.start_time
+                print(f"📊 Producer running for {elapsed:.1f}s - Stream active on {self.host}:{self.udp_port}")
+                sys.stdout.flush()
                 
         except KeyboardInterrupt:
             logger.info("Shutting down...")
