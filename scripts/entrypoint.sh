@@ -67,10 +67,13 @@ main() {
     check_gstreamer
     check_cuda
     
-    # Validate stream URL if provided
-    if [ $# -gt 0 ]; then
-        validate_stream_url "$1"
-        test_connectivity "$1"
+    # Validate RTSP_URL environment variable if set
+    if [ -n "$RTSP_URL" ]; then
+        validate_stream_url "$RTSP_URL"
+        # Only test connectivity for RTSP URLs (not UDP)
+        if [[ $RTSP_URL =~ ^rtsp:// ]]; then
+            test_connectivity "$RTSP_URL"
+        fi
     fi
     
     # Create necessary directories
