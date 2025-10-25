@@ -123,9 +123,20 @@ class UDPRTPProducer:
         """Start the GStreamer pipeline in a separate thread"""
         def gst_thread():
             try:
-                self.pipeline.set_state(Gst.State.PLAYING)
-                loop = GLib.MainLoop()
+                logger.info("Setting pipeline to PLAYING state...")
+                ret = self.pipeline.set_state(Gst.State.PLAYING)
+                logger.info(f"Pipeline state change result: {ret}")
+                
+                # Wait a bit for pipeline to start
+                time.sleep(1)
+                
+                # Check pipeline state
+                state = self.pipeline.get_state(timeout=2 * Gst.SECOND)
+                logger.info(f"Pipeline state: {state}")
+                
                 self.running = True
+                loop = GLib.MainLoop()
+                logger.info("Starting GStreamer main loop...")
                 loop.run()
             except Exception as e:
                 logger.error(f"GStreamer error: {e}")
