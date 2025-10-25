@@ -21,7 +21,7 @@ if [ $? -eq 0 ]; then
         -e RTSP_URL=udp://100.94.31.62:8554 \
         --name rtsp-consumer-manual \
         rtsp-consumer-dgx \
-        python3 rtsp_consumer.py
+        /app/run_consumer.sh
 else
     echo "❌ Build failed!"
     exit 1
