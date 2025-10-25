@@ -218,32 +218,23 @@ def main():
     print("=" * 60)
     sys.stdout.flush()
     
-    # Get URL from environment variable first, then command line args
+    # Get URL from environment variable ONLY - ignore command line args completely
     env_url = os.getenv('RTSP_URL')
     
-    parser = argparse.ArgumentParser(description='RTSP Consumer')
-    parser.add_argument('--url', default=None,
-                       help='RTSP/UDP stream URL (overrides RTSP_URL env var)')
-    
-    # Parse arguments, but ignore any positional arguments that look like script paths
-    args = parser.parse_args()
-    
-    # Prioritize environment variable over command line argument
+    # Use environment variable or default - NO command line parsing
     if env_url:
-        args.url = env_url
-    elif not args.url:
-        args.url = 'udp://100.94.31.62:8554'  # Updated to correct IP
+        url = env_url
+        print(f"✅ Using environment URL: {url}")
+    else:
+        url = 'udp://100.94.31.62:8554'
+        print(f"✅ Using default URL: {url}")
     
-    # Additional check: if URL looks like a script path, force use environment variable
-    if args.url and (args.url.startswith('/app/') or args.url.endswith('.sh')):
-        print(f"⚠️  Detected script path as URL: {args.url}")
-        print("🔄 Forcing use of environment variable...")
-        if env_url:
-            args.url = env_url
-            print(f"✅ Using environment URL: {args.url}")
-        else:
-            args.url = 'udp://100.94.31.62:8554'
-            print(f"✅ Using default URL: {args.url}")
+    # Create a simple args object for compatibility
+    class Args:
+        def __init__(self, url):
+            self.url = url
+    
+    args = Args(url)
     
     # Debug: Print the URL being used with proper logging
     print(f"🔗 Using stream URL: {args.url}")
