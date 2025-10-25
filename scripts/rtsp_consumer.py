@@ -39,12 +39,13 @@ class RTSPConsumer:
         
     def on_new_sample(self, sink):
         """Callback function for new video samples from GStreamer"""
+        logger.info("🎬 on_new_sample callback called!")
         sample = sink.emit("pull-sample")
         if not sample:
             logger.warning("No sample received from appsink")
             return Gst.FlowReturn.ERROR
         
-        logger.debug(f"Received sample: {sample}")
+        logger.info(f"✅ Received sample: {sample}")
             
         buf = sample.get_buffer()
         caps = sample.get_caps()
@@ -207,6 +208,8 @@ class RTSPConsumer:
             raise RuntimeError("Could not find appsink element in pipeline")
             
         appsink.connect("new-sample", self.on_new_sample)
+        logger.info("Connected appsink callback")
+        logger.info(f"Appsink properties: max-buffers={appsink.get_property('max-buffers')}, drop={appsink.get_property('drop')}, sync={appsink.get_property('sync')}")
         return self.pipeline
     
     def start_gstreamer(self):
