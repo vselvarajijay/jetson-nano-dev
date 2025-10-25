@@ -1,0 +1,17 @@
+# DeepStream Web Server Dependencies
+# Core web framework
+Flask==2.3.3
+
+# Computer vision and image processing
+opencv-python==4.8.1.78
+numpy==1.24.3
+
+# GStreamer Python bindings (usually installed via system packages)
+# PyGObject==3.46.0  # Uncomment if installing via pip
+
+# Additional utilities
+Pillow==10.0.1
+
+# Development and debugging (optional)
+# flask-cors==4.0.0  # For CORS support if needed
+# gunicorn==21.2.0   # For production deployment
