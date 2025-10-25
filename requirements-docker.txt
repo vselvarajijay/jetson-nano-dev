@@ -1,0 +1,26 @@
+# RTSP Consumer Docker Requirements
+# Optimized for NVIDIA DGX Spark deployment
+
+# Core Python packages
+numpy==1.24.3
+opencv-python==4.8.1.78
+
+# GStreamer Python bindings (PyGObject)
+PyGObject==3.46.0
+
+# Additional utilities
+Pillow==10.0.1
+
+# Logging and monitoring
+psutil==5.9.5
+
+# Network utilities
+requests==2.31.0
+
+# Optional: For enhanced video processing
+# scipy==1.11.1
+# matplotlib==3.7.2
+
+# Development and debugging (optional)
+# ipython==8.14.0
+# jupyter==1.0.0

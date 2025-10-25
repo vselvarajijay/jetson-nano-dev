@@ -195,9 +195,14 @@ class RTSPConsumer:
 
 def main():
     """Main function"""
+    import os
+    
+    # Get default URL from environment variable or use default
+    default_url = os.getenv('RTSP_URL', 'rtsp://127.0.0.1:8554/test')
+    
     parser = argparse.ArgumentParser(description='RTSP Consumer')
-    parser.add_argument('--url', default='rtsp://127.0.0.1:8554/test',
-                       help='RTSP stream URL (default: rtsp://127.0.0.1:8554/test)')
+    parser.add_argument('--url', default=default_url,
+                       help='RTSP stream URL (default: rtsp://127.0.0.1:8554/test or RTSP_URL env var)')
     
     args = parser.parse_args()
     

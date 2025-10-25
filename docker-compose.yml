@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  rtsp-consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rtsp-consumer-dgx
+    runtime: nvidia  # Enable NVIDIA GPU access
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - GST_DEBUG=2
+      - PYTHONUNBUFFERED=1
+      - RTSP_URL=rtsp://host.docker.internal:8554/test  # Default RTSP URL
+    volumes:
+      # Mount output directory for saving frames
+      - ./output:/app/output
+      # Mount logs directory
+      - ./logs:/app/logs
+      # Optional: Mount custom config
+      - ./config:/app/config:ro
+    ports:
+      # Expose port for web interface (if added later)
+      - "8080:8080"
+    networks:
+      - rtsp-network
+    restart: unless-stopped
+    # Resource limits for DGX Spark
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+          cpus: '4.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+    # Health check
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import gi; gi.require_version('Gst', '1.0'); from gi.repository import Gst; Gst.init(None)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Override default command with RTSP URL
+    command: ["python3", "rtsp_consumer.py", "--url", "rtsp://host.docker.internal:8554/test"]
+
+  # Optional: RTSP Producer for testing (if running locally)
+  rtsp-producer:
+    build:
+      context: .
+      dockerfile: Dockerfile.producer
+    container_name: rtsp-producer-test
+    privileged: true  # Required for camera access
+    devices:
+      - /dev/video0:/dev/video0  # Adjust device path as needed
+    ports:
+      - "8554:8554"
+    networks:
+      - rtsp-network
+    restart: unless-stopped
+    profiles:
+      - testing  # Only start with --profile testing
+
+networks:
+  rtsp-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  output-data:
+    driver: local
+  logs-data:
+    driver: local
