@@ -48,7 +48,6 @@ RUN apt-get update && apt-get install -y \
     # Network and system libraries
     libssl-dev \
     libglib2.0-dev \
-    libgobject-2.0-dev \
     libgirepository1.0-dev \
     # Cleanup
     && apt-get clean \
