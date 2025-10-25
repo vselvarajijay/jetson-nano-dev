@@ -1,7 +1,7 @@
 # RTSP Consumer Docker Container for DGX Spark
 # Optimized for NVIDIA DGX systems with CUDA support
 
-FROM nvidia/cuda:12.2-devel-ubuntu22.04
+FROM nvidia/cuda:12.2.2-devel-ubuntu22.04
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
