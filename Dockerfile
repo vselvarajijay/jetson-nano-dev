@@ -71,10 +71,7 @@ COPY scripts/entrypoint.sh /app/
 COPY scripts/run_consumer.sh /app/
 RUN chmod +x /app/entrypoint.sh /app/run_consumer.sh
 
-# Verify files exist
-RUN ls -la /app/
-
-# Create directories for output (optional)
+# Create directories for output
 RUN mkdir -p /app/output /app/logs || true
 
 # Set up GStreamer environment
@@ -92,4 +89,5 @@ EXPOSE 8080
 ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Default command
-CMD ["python3", "rtsp_consumer.py"]
+CMD ["/app/run_consumer.sh"]
+
