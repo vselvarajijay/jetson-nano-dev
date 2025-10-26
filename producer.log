@@ -1,0 +1,61 @@
+/home/vijay/Development/jetson-nano-dev/scripts/udp_rtp_producer.py:20: PyGIWarning: GstApp was imported without specifying a version first. Use gi.require_version('GstApp', '1.0') before import to ensure that the right version gets loaded.
+  from gi.repository import Gst, GLib, GstApp
+INFO:__main__:Setting up GStreamer pipeline: v4l2src device=/dev/video4 !
+            video/x-raw,width=640,height=480,framerate=30/1 !
+            videoconvert !
+            identity name=frame_counter !
+            x264enc tune=zerolatency !
+            rtph264pay !
+            udpsink host=0.0.0.0 port=8554
+INFO:__main__:Added frame counting probe
+INFO:__main__:Starting UDP RTP producer...
+INFO:__main__:Setting pipeline to PLAYING state...
+INFO:__main__:Pipeline state change result: <enum GST_STATE_CHANGE_ASYNC of type Gst.StateChangeReturn>
+🎥 Producer: Frame #1 captured!
+🎥 Producer: Frame #2 captured!
+🎥 Producer: Frame #3 captured!
+🎥 Producer: Frame #4 captured!
+🎥 Producer: Frame #5 captured!
+🎥 Producer: Frame #6 captured!
+🎥 Producer: Frame #7 captured!
+🎥 Producer: Frame #8 captured!
+🎥 Producer: Frame #9 captured!
+🎥 Producer: Frame #10 captured!
+INFO:__main__:Pipeline state: (<enum GST_STATE_CHANGE_SUCCESS of type Gst.StateChangeReturn>, state=<enum GST_STATE_PLAYING of type Gst.State>, pending=<enum GST_STATE_VOID_PENDING of type Gst.State>)
+INFO:__main__:Starting GStreamer main loop...
+📊 Producer: 44 frames | Real-time FPS: 22.0 | Avg FPS: 22.0 | Runtime: 2.0s
+INFO:__main__:============================================================
+INFO:__main__:🎥 UDP RTP STREAM READY
+INFO:__main__:============================================================
+INFO:__main__:Local URL:  udp://127.0.0.1:8554
+INFO:__main__:Network URL: udp://192.168.0.237:8554
+INFO:__main__:============================================================
+INFO:__main__:Use GStreamer consumer to view the stream
+INFO:__main__:Press Ctrl+C to stop
+INFO:__main__:============================================================
+📊 Producer: 104 frames | Real-time FPS: 30.0 | Avg FPS: 26.0 | Runtime: 4.0s
+📊 Producer: 164 frames | Real-time FPS: 30.0 | Avg FPS: 27.3 | Runtime: 6.0s
+📊 Producer: 224 frames | Real-time FPS: 30.0 | Avg FPS: 28.0 | Runtime: 8.0s
+📊 Producer: 284 frames | Real-time FPS: 30.0 | Avg FPS: 28.4 | Runtime: 10.0s
+📊 Producer: 344 frames | Real-time FPS: 30.0 | Avg FPS: 28.6 | Runtime: 12.0s
+📊 Producer: 404 frames | Real-time FPS: 30.0 | Avg FPS: 28.8 | Runtime: 14.0s
+📊 Producer: 464 frames | Real-time FPS: 29.9 | Avg FPS: 29.0 | Runtime: 16.0s
+📊 Producer: 525 frames | Real-time FPS: 30.1 | Avg FPS: 29.1 | Runtime: 18.0s
+📊 Producer: 585 frames | Real-time FPS: 30.0 | Avg FPS: 29.2 | Runtime: 20.0s
+📊 Producer: 645 frames | Real-time FPS: 30.0 | Avg FPS: 29.3 | Runtime: 22.1s
+📊 Producer: 705 frames | Real-time FPS: 30.0 | Avg FPS: 29.3 | Runtime: 24.1s
+📊 Producer: 765 frames | Real-time FPS: 30.0 | Avg FPS: 29.4 | Runtime: 26.1s
+📊 Producer: 825 frames | Real-time FPS: 30.0 | Avg FPS: 29.4 | Runtime: 28.1s
+📊 Producer: 885 frames | Real-time FPS: 30.0 | Avg FPS: 29.4 | Runtime: 30.1s
+📊 Producer: 945 frames | Real-time FPS: 30.0 | Avg FPS: 29.5 | Runtime: 32.1s
+📊 Producer: 1005 frames | Real-time FPS: 30.0 | Avg FPS: 29.5 | Runtime: 34.1s
+📊 Producer: 1065 frames | Real-time FPS: 30.0 | Avg FPS: 29.5 | Runtime: 36.1s
+📊 Producer: 1125 frames | Real-time FPS: 30.0 | Avg FPS: 29.6 | Runtime: 38.1s
+📊 Producer: 1185 frames | Real-time FPS: 30.0 | Avg FPS: 29.6 | Runtime: 40.1s
+📊 Producer: 1245 frames | Real-time FPS: 30.0 | Avg FPS: 29.6 | Runtime: 42.1s
+📊 Producer: 1305 frames | Real-time FPS: 30.0 | Avg FPS: 29.6 | Runtime: 44.1s
+📊 Producer: 1365 frames | Real-time FPS: 30.0 | Avg FPS: 29.6 | Runtime: 46.1s
+📊 Producer: 1425 frames | Real-time FPS: 30.0 | Avg FPS: 29.6 | Runtime: 48.1s
+📊 Producer: 1485 frames | Real-time FPS: 30.0 | Avg FPS: 29.7 | Runtime: 50.1s
+📊 Producer: 1545 frames | Real-time FPS: 30.0 | Avg FPS: 29.7 | Runtime: 52.1s
+📊 Producer: 1605 frames | Real-time FPS: 30.0 | Avg FPS: 29.7 | Runtime: 54.1s
