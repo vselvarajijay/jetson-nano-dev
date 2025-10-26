@@ -182,10 +182,12 @@ class RTSPConsumer:
             
             pipeline_str = f"""
             udpsrc port={port} !
-            application/x-rtp !
+            application/x-rtp,encoding-name=H264,payload=96 !
             rtph264depay !
             h264parse !
             avdec_h264 !
+            videoconvert !
+            video/x-raw,format=GRAY8 !
             videoconvert !
             video/x-raw,format=BGR !
             appsink emit-signals=true max-buffers=1 drop=true sync=false
