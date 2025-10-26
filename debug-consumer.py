@@ -9,7 +9,8 @@ import os
 import time
 
 gi.require_version("Gst", "1.0")
-from gi.repository import Gst, GLib
+gi.require_version("GstApp", "1.0")
+from gi.repository import Gst, GLib, GstApp
 
 Gst.init(None)
 
