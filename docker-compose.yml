@@ -38,9 +38,3 @@ services:
       start_period: 40s
     # Use environment variable instead of command line args
     command: ["/app/run_consumer.sh"]
-
-volumes:
-  output-data:
-    driver: local
-  logs-data:
-    driver: local
