@@ -108,16 +108,16 @@ test_connectivity() {
     echo "🔍 Testing network connectivity..."
     
     # Get RTSP_URL from environment or use default
-    RTSP_URL=${RTSP_URL:-"udp://127.0.0.1:8554"}
+    RTSP_URL=${RTSP_URL:-"rtsp://100.94.31.62:8554"}
     
     echo "   Testing URL: $RTSP_URL"
     
-    # Parse URL for ping test
+    # Parse URL for connectivity test
     if [[ $RTSP_URL =~ ^udp://([^:]+):([0-9]+)$ ]]; then
         HOST=${BASH_REMATCH[1]}
         PORT=${BASH_REMATCH[2]}
         
-        echo "   Host: $HOST, Port: $PORT"
+        echo "   Host: $HOST, Port: $PORT (UDP)"
         
         # Test ping
         if ping -c 2 $HOST >/dev/null 2>&1; then
@@ -131,6 +131,25 @@ test_connectivity() {
             echo "   ✅ UDP port $PORT accessible"
         else
             echo "   ⚠️  UDP port $PORT not accessible (producer may not be running)"
+        fi
+    elif [[ $RTSP_URL =~ ^rtsp://([^:]+):([0-9]+)(/.*)?$ ]]; then
+        HOST=${BASH_REMATCH[1]}
+        PORT=${BASH_REMATCH[2]}
+        
+        echo "   Host: $HOST, Port: $PORT (RTSP)"
+        
+        # Test ping
+        if ping -c 2 $HOST >/dev/null 2>&1; then
+            echo "   ✅ Ping to $HOST successful"
+        else
+            echo "   ⚠️  Ping to $HOST failed"
+        fi
+        
+        # Test TCP port for RTSP
+        if timeout 3 nc -z $HOST $PORT 2>/dev/null; then
+            echo "   ✅ RTSP port $PORT accessible"
+        else
+            echo "   ⚠️  RTSP port $PORT not accessible (stream may not be running)"
         fi
     else
         echo "   ⚠️  Could not parse URL: $RTSP_URL"
@@ -148,7 +167,7 @@ start_consumer() {
     trap 'echo -e "\n🛑 Received interrupt signal. Shutting down..."; exit 0' INT TERM
     
     # Get RTSP_URL from environment or use default
-    RTSP_URL=${RTSP_URL:-"udp://127.0.0.1:8554"}
+    RTSP_URL=${RTSP_URL:-"rtsp://100.94.31.62:8554"}
     
     echo "🔗 Using stream URL: $RTSP_URL"
     echo "=================================="
@@ -199,12 +218,12 @@ show_usage() {
     echo "  -u, --url URL  Set RTSP_URL environment variable"
     echo ""
     echo "Environment variables:"
-    echo "  RTSP_URL       Stream URL (default: udp://127.0.0.1:8554)"
+    echo "  RTSP_URL       Stream URL (default: rtsp://100.94.31.62:8554)"
     echo ""
     echo "Examples:"
-    echo "  $0                                    # Use default URL"
-    echo "  $0 -u udp://192.168.0.237:8554       # Use WiFi IP"
-    echo "  RTSP_URL=udp://127.0.0.1:8554 $0     # Use environment variable"
+    echo "  $0                                    # Use default RTSP URL"
+    echo "  $0 -u rtsp://192.168.0.237:8554      # Use different RTSP URL"
+    echo "  RTSP_URL=rtsp://100.94.31.62:8554 $0 # Use environment variable"
 }
 
 # Parse command line arguments
