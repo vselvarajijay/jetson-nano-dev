@@ -58,7 +58,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python packages
-COPY requirements-docker.txt /tmp/requirements-docker.txt
+COPY consumer/requirements.txt /tmp/requirements-docker.txt
 RUN pip3 install --no-cache-dir --upgrade pip && \
     pip3 install --no-cache-dir -r /tmp/requirements-docker.txt
 
@@ -66,9 +66,9 @@ RUN pip3 install --no-cache-dir --upgrade pip && \
 WORKDIR /app
 
 # Copy application files
-COPY scripts/rtsp_consumer.py /app/
-COPY scripts/entrypoint.sh /app/
-COPY scripts/run_consumer.sh /app/
+COPY consumer/rtsp_consumer.py /app/
+COPY consumer/entrypoint.sh /app/
+COPY consumer/run_consumer.sh /app/
 RUN chmod +x /app/entrypoint.sh /app/run_consumer.sh
 
 # Create directories for output

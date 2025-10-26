@@ -71,8 +71,8 @@ check_environment() {
     echo "🔍 Checking environment..."
     
     # Check if we're in the right directory
-    if [ ! -f "scripts/rtsp_consumer.py" ]; then
-        echo "❌ Error: scripts/rtsp_consumer.py not found!"
+    if [ ! -f "consumer/rtsp_consumer.py" ]; then
+        echo "❌ Error: consumer/rtsp_consumer.py not found!"
         echo "Please run this script from the project root directory"
         exit 1
     fi
@@ -145,7 +145,7 @@ start_consumer() {
     
     # Build Docker image if needed
     echo "🔨 Building Docker image..."
-    docker build -t rtsp-consumer-dgx -f Dockerfile .
+    docker build -t rtsp-consumer-dgx -f consumer/Dockerfile .
     
     if [ $? -ne 0 ]; then
         echo "❌ Docker build failed!"

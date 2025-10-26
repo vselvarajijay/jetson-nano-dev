@@ -3,8 +3,8 @@ version: '3.8'
 services:
   rtsp-consumer:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: consumer/Dockerfile
     container_name: rtsp-consumer-dgx
     runtime: nvidia  # Enable NVIDIA GPU access
     network_mode: host  # Use host networking for UDP access
