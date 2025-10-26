@@ -181,7 +181,7 @@ class RTSPConsumer:
             logger.info(f"UDP connection: host={host}, port={port}")
             
             pipeline_str = f"""
-            udpsrc port={port} !
+            tcpclientsrc host={host} port={port} !
             application/x-rtp !
             rtph264depay !
             h264parse !
@@ -301,7 +301,7 @@ def main():
         url = env_url
         print(f"✅ Using environment URL: {url}")
     else:
-        url = 'udp://100.94.31.62:8554'
+        url = 'udp://127.0.0.1:8554'
         print(f"✅ Using default URL: {url}")
     
     # Debug: Print the URL being used with proper logging

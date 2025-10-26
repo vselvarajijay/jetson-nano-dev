@@ -109,7 +109,7 @@ class UDPRTPProducer:
             x264enc tune=zerolatency !
             h264parse !
             rtph264pay !
-            udpsink host=100.94.31.62 port={self.udp_port}
+            tcpserversink host=0.0.0.0 port={self.udp_port}
             """
         elif source_type == "deepstream":
             # DeepStream pipeline with UDP RTP streaming and frame counting
