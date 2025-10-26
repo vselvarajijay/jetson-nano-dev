@@ -7,6 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: rtsp-consumer-dgx
     runtime: nvidia  # Enable NVIDIA GPU access
+    network_mode: host  # Use host networking for UDP access
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=all
@@ -18,13 +19,6 @@ services:
       - ./output:/app/output
       # Mount logs directory
       - ./logs:/app/logs
-      # Optional: Mount custom config
-      - ./config:/app/config:ro
-    ports:
-      # Expose port for web interface (if added later)
-      - "8080:8080"
-    networks:
-      - rtsp-network
     restart: unless-stopped
     # Resource limits for DGX Spark
     deploy:
@@ -42,32 +36,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    # Override default command with UDP RTP URL
-    command: ["python3", "rtsp_consumer.py", "--url", "udp://100.94.31.62:8554"]
-
-  # Optional: RTSP Producer for testing (if running locally)
-  rtsp-producer:
-    build:
-      context: .
-      dockerfile: Dockerfile.producer
-    container_name: rtsp-producer-test
-    privileged: true  # Required for camera access
-    devices:
-      - /dev/video0:/dev/video0  # Adjust device path as needed
-    ports:
-      - "8554:8554"
-    networks:
-      - rtsp-network
-    restart: unless-stopped
-    profiles:
-      - testing  # Only start with --profile testing
-
-networks:
-  rtsp-network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
+    # Use environment variable instead of command line args
+    command: ["/app/run_consumer.sh"]
 
 volumes:
   output-data:
