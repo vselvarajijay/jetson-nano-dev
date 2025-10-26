@@ -77,17 +77,17 @@ check_environment() {
         exit 1
     fi
     
-    # Check if Python is available
-    if ! command -v python3 &> /dev/null; then
-        echo "❌ Error: python3 not found!"
+    # Check if Docker is available
+    if ! command -v docker &> /dev/null; then
+        echo "❌ Error: docker not found!"
+        echo "Please install Docker"
         exit 1
     fi
     
-    # Check if GStreamer is available
-    if ! command -v gst-launch-1.0 &> /dev/null; then
-        echo "❌ Error: gst-launch-1.0 not found!"
-        echo "Please install GStreamer development packages"
-        exit 1
+    # Check if nvidia-docker is available
+    if ! docker info | grep -q nvidia; then
+        echo "⚠️  Warning: nvidia runtime not detected"
+        echo "Container will start without GPU access"
     fi
     
     echo "✅ Environment checks passed"
@@ -131,8 +131,8 @@ test_connectivity() {
 
 # Function to start consumer with error handling
 start_consumer() {
-    echo "🎥 Starting RTSP Consumer..."
-    echo "============================="
+    echo "🎥 Starting RTSP Consumer in Docker..."
+    echo "========================================"
     
     # Set up signal handler for graceful shutdown
     trap 'echo -e "\n🛑 Received interrupt signal. Shutting down..."; exit 0' INT TERM
@@ -143,8 +143,31 @@ start_consumer() {
     echo "🔗 Using stream URL: $RTSP_URL"
     echo "=================================="
     
-    # Start the consumer
-    python3 scripts/rtsp_consumer.py
+    # Build Docker image if needed
+    echo "🔨 Building Docker image..."
+    docker build -t rtsp-consumer-dgx -f Dockerfile .
+    
+    if [ $? -ne 0 ]; then
+        echo "❌ Docker build failed!"
+        exit 1
+    fi
+    
+    echo "✅ Docker image built successfully"
+    echo ""
+    
+    # Run the consumer in Docker
+    echo "🚀 Starting consumer container..."
+    
+    docker run --rm \
+        --runtime=nvidia \
+        --network=host \
+        -e NVIDIA_VISIBLE_DEVICES=all \
+        -e NVIDIA_DRIVER_CAPABILITIES=all \
+        -e GST_DEBUG=2 \
+        -e PYTHONUNBUFFERED=1 \
+        -e RTSP_URL="$RTSP_URL" \
+        --name rtsp-consumer-dgx \
+        rtsp-consumer-dgx
     
     # Check exit status
     EXIT_CODE=$?
