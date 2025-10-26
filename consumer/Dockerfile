@@ -58,7 +58,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python packages
-COPY requirements-docker.txt /tmp/requirements-docker.txt
+COPY consumer/requirements.txt /tmp/requirements-docker.txt
 RUN pip3 install --no-cache-dir --upgrade pip && \
     pip3 install --no-cache-dir -r /tmp/requirements-docker.txt
 
@@ -66,15 +66,11 @@ RUN pip3 install --no-cache-dir --upgrade pip && \
 WORKDIR /app
 
 # Copy application files
-COPY scripts/rtsp_consumer.py /app/
-COPY scripts/entrypoint.sh /app/
-COPY scripts/run_consumer.sh /app/
-RUN chmod +x /app/entrypoint.sh /app/run_consumer.sh
+COPY consumer/rtsp_consumer.py /app/
+COPY consumer/entrypoint.sh /app/
+RUN chmod +x /app/entrypoint.sh
 
-# Verify files exist
-RUN ls -la /app/
-
-# Create directories for output (optional)
+# Create directories for output
 RUN mkdir -p /app/output /app/logs || true
 
 # Set up GStreamer environment
@@ -91,5 +87,5 @@ EXPOSE 8080
 # Set entrypoint
 ENTRYPOINT ["/app/entrypoint.sh"]
 
-# Default command
-CMD ["python3", "rtsp_consumer.py"]
+# No default command - entrypoint.sh will run the consumer if RTSP_URL is set
+

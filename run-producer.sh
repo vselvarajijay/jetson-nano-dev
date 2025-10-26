@@ -108,7 +108,7 @@ start_producer() {
     trap 'echo -e "\n🛑 Received interrupt signal. Shutting down..."; exit 0' INT TERM
     
     # Start the producer
-    python3 scripts/udp_rtp_producer.py
+    python3 producer/udp_rtp_producer.py
     
     # Check exit status
     EXIT_CODE=$?
@@ -127,8 +127,8 @@ main() {
     echo "================================"
     
     # Check if we're in the right directory
-    if [ ! -f "scripts/udp_rtp_producer.py" ]; then
-        echo "❌ Error: scripts/udp_rtp_producer.py not found!"
+    if [ ! -f "producer/udp_rtp_producer.py" ]; then
+        echo "❌ Error: producer/udp_rtp_producer.py not found!"
         echo "Please run this script from the project root directory"
         exit 1
     fi

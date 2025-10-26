@@ -27,7 +27,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class UDPRTPProducer:
-    def __init__(self, udp_port=8554, host="0.0.0.0"):
+    def __init__(self, udp_port=8554, host="127.0.0.1"):
         self.udp_port = udp_port
         self.host = host
         self.frame = None
@@ -109,7 +109,7 @@ class UDPRTPProducer:
             x264enc tune=zerolatency !
             h264parse !
             rtph264pay !
-            udpsink host=100.64.24.69 port={self.udp_port} bind-address=0.0.0.0
+            udpsink host={self.host} port={self.udp_port} bind-address=0.0.0.0
             """
         elif source_type == "deepstream":
             # DeepStream pipeline with UDP RTP streaming and frame counting

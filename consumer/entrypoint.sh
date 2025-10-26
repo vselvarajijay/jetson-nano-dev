@@ -87,8 +87,14 @@ main() {
     echo "✅ Container initialization complete"
     echo "=" * 60
     
-    # Execute the main command
-    exec "$@"
+    # If RTSP_URL is provided, run the consumer script
+    if [ -n "$RTSP_URL" ]; then
+        echo "🚀 Starting RTSP Consumer with URL: $RTSP_URL"
+        exec python3 /app/rtsp_consumer.py
+    else
+        # Otherwise execute the provided command
+        exec "$@"
+    fi
 }
 
 # Run main function with all arguments
