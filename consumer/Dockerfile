@@ -68,8 +68,7 @@ WORKDIR /app
 # Copy application files
 COPY consumer/rtsp_consumer.py /app/
 COPY consumer/entrypoint.sh /app/
-COPY consumer/run_consumer.sh /app/
-RUN chmod +x /app/entrypoint.sh /app/run_consumer.sh
+RUN chmod +x /app/entrypoint.sh
 
 # Create directories for output
 RUN mkdir -p /app/output /app/logs || true
@@ -88,6 +87,5 @@ EXPOSE 8080
 # Set entrypoint
 ENTRYPOINT ["/app/entrypoint.sh"]
 
-# Default command
-CMD ["/app/run_consumer.sh"]
+# No default command - entrypoint.sh will run the consumer if RTSP_URL is set
 

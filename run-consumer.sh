@@ -108,7 +108,7 @@ test_connectivity() {
     echo "🔍 Testing network connectivity..."
     
     # Get RTSP_URL from environment or use default
-    RTSP_URL=${RTSP_URL:-"rtsp://100.94.31.62:8554"}
+    RTSP_URL=${RTSP_URL:-"udp://127.0.0.1:8554"}
     
     echo "   Testing URL: $RTSP_URL"
     
@@ -167,7 +167,7 @@ start_consumer() {
     trap 'echo -e "\n🛑 Received interrupt signal. Shutting down..."; exit 0' INT TERM
     
     # Get RTSP_URL from environment or use default
-    RTSP_URL=${RTSP_URL:-"rtsp://100.94.31.62:8554"}
+    RTSP_URL=${RTSP_URL:-"udp://127.0.0.1:8554"}
     
     echo "🔗 Using stream URL: $RTSP_URL"
     echo "=================================="
@@ -218,12 +218,12 @@ show_usage() {
     echo "  -u, --url URL  Set RTSP_URL environment variable"
     echo ""
     echo "Environment variables:"
-    echo "  RTSP_URL       Stream URL (default: rtsp://100.94.31.62:8554)"
+    echo "  RTSP_URL       Stream URL (default: udp://127.0.0.1:8554)"
     echo ""
     echo "Examples:"
-    echo "  $0                                    # Use default RTSP URL"
-    echo "  $0 -u rtsp://192.168.0.237:8554      # Use different RTSP URL"
-    echo "  RTSP_URL=rtsp://100.94.31.62:8554 $0 # Use environment variable"
+    echo "  $0                                    # Use default UDP URL (localhost)"
+    echo "  $0 -u udp://100.x.x.x:8554           # Use tailscale IP for remote"
+    echo "  RTSP_URL=udp://127.0.0.1:8554 $0     # Use environment variable"
 }
 
 # Parse command line arguments
