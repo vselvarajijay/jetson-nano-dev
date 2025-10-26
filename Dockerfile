@@ -69,9 +69,7 @@ WORKDIR /app
 COPY scripts/rtsp_consumer.py /app/
 COPY scripts/entrypoint.sh /app/
 COPY scripts/run_consumer.sh /app/
-COPY test_docker_env.py /app/
-COPY debug-consumer.py /app/
-RUN chmod +x /app/entrypoint.sh /app/run_consumer.sh /app/debug-consumer.py
+RUN chmod +x /app/entrypoint.sh /app/run_consumer.sh
 
 # Verify files exist
 RUN ls -la /app/

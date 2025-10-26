@@ -3,7 +3,7 @@
 # Simple Docker run command for RTSP Consumer
 # Bypasses Docker Compose to avoid volume configuration issues
 
-echo "🚀 Running RTSP Consumer with Docker (Simple)"
+echo "🚀 Running RTSP Consumer with Docker"
 echo "============================================="
 
 # Build the image
