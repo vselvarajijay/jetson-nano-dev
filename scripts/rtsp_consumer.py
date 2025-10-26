@@ -14,8 +14,7 @@ import argparse
 import sys
 
 gi.require_version("Gst", "1.0")
-gi.require_version("GstApp", "1.0")
-from gi.repository import Gst, GLib, GstApp
+from gi.repository import Gst, GLib
 
 # Initialize GStreamer
 Gst.init(None)
@@ -201,10 +200,7 @@ class RTSPConsumer:
         bus.connect("message", self.on_bus_message)
         
         # Get appsink element
-        appsink = self.pipeline.get_by_interface(GstApp.AppSink)
-        if not appsink:
-            appsink = self.pipeline.get_by_name("appsink0")
-            
+        appsink = self.pipeline.get_by_name("appsink0")
         if not appsink:
             raise RuntimeError("Could not find appsink element in pipeline")
             

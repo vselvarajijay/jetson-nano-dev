@@ -9,8 +9,7 @@ import os
 import time
 
 gi.require_version("Gst", "1.0")
-gi.require_version("GstApp", "1.0")
-from gi.repository import Gst, GLib, GstApp
+from gi.repository import Gst, GLib
 
 Gst.init(None)
 
@@ -81,10 +80,7 @@ bus.add_signal_watch()
 bus.connect("message", on_bus_message)
 
 # Get appsink
-appsink = pipeline.get_by_interface(Gst.AppSink)
-if not appsink:
-    appsink = pipeline.get_by_name("appsink0")
-
+appsink = pipeline.get_by_name("appsink0")
 if not appsink:
     print("❌ Could not find appsink")
     sys.exit(1)
