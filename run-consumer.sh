@@ -84,6 +84,16 @@ check_environment() {
         exit 1
     fi
     
+    # Test Docker access
+    if ! docker ps &> /dev/null; then
+        echo "❌ Error: Cannot access Docker daemon!"
+        echo "You may need to:"
+        echo "  1. Run with sudo: sudo $0"
+        echo "  2. Or reload the docker group: newgrp docker"
+        echo "  3. Or add user to docker group: sudo usermod -aG docker $USER"
+        exit 1
+    fi
+    
     # Check if nvidia-docker is available
     if ! docker info | grep -q nvidia; then
         echo "⚠️  Warning: nvidia runtime not detected"
@@ -98,7 +108,7 @@ test_connectivity() {
     echo "🔍 Testing network connectivity..."
     
     # Get RTSP_URL from environment or use default
-    RTSP_URL=${RTSP_URL:-"udp://100.94.31.62:8554"}
+    RTSP_URL=${RTSP_URL:-"udp://127.0.0.1:8554"}
     
     echo "   Testing URL: $RTSP_URL"
     
@@ -138,7 +148,7 @@ start_consumer() {
     trap 'echo -e "\n🛑 Received interrupt signal. Shutting down..."; exit 0' INT TERM
     
     # Get RTSP_URL from environment or use default
-    RTSP_URL=${RTSP_URL:-"udp://100.94.31.62:8554"}
+    RTSP_URL=${RTSP_URL:-"udp://127.0.0.1:8554"}
     
     echo "🔗 Using stream URL: $RTSP_URL"
     echo "=================================="
@@ -189,12 +199,12 @@ show_usage() {
     echo "  -u, --url URL  Set RTSP_URL environment variable"
     echo ""
     echo "Environment variables:"
-    echo "  RTSP_URL       Stream URL (default: udp://100.94.31.62:8554)"
+    echo "  RTSP_URL       Stream URL (default: udp://127.0.0.1:8554)"
     echo ""
     echo "Examples:"
     echo "  $0                                    # Use default URL"
     echo "  $0 -u udp://192.168.0.237:8554       # Use WiFi IP"
-    echo "  RTSP_URL=udp://100.94.31.62:8554 $0  # Use environment variable"
+    echo "  RTSP_URL=udp://127.0.0.1:8554 $0     # Use environment variable"
 }
 
 # Parse command line arguments
