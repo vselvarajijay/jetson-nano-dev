@@ -112,13 +112,20 @@ class UDPRTPProducer:
             udpsink host={self.host} port={self.udp_port} bind-address=0.0.0.0
             """
         elif source_type == "deepstream":
-            # DeepStream pipeline with UDP RTP streaming and frame counting
+            # DeepStream GPU-accelerated pipeline with grayscale conversion
+            # Using v4l2src for USB camera (RealSense)
+            # Note: Simplified pipeline without nvstreammux for compatibility
             pipeline_str = f"""
-            nvarguscamerasrc !
-            video/x-raw(memory:NVMM),width=640,height=480,format=NV12,framerate=30/1 !
-            nvvidconv !
+            v4l2src device={device} !
+            video/x-raw,width=640,height=480,framerate=30/1 !
+            nvvideoconvert !
+            video/x-raw(memory:NVMM),format=NV12 !
+            nvvideoconvert !
+            video/x-raw,format=GRAY8 !
+            videoconvert !
+            video/x-raw,format=I420 !
             identity name=frame_counter !
-            nvv4l2h264enc bitrate=2000 !
+            x264enc tune=zerolatency bitrate=2000 speed-preset=ultrafast threads=4 !
             h264parse !
             rtph264pay pt=96 !
             udpsink host={self.host} port={self.udp_port}
@@ -258,10 +265,10 @@ def main():
     parser = argparse.ArgumentParser(description='UDP RTP Producer')
     parser.add_argument('--port', type=int, default=8554, help='UDP port (default: 8554)')
     parser.add_argument('--host', default='0.0.0.0', help='Host to bind to (default: 0.0.0.0)')
-    parser.add_argument('--source', choices=['v4l2', 'deepstream'], default='v4l2',
-                       help='Video source type (default: v4l2)')
-    parser.add_argument('--device', default='/dev/video4', 
-                       help='Video device path (default: /dev/video4)')
+    parser.add_argument('--source', choices=['v4l2', 'deepstream'], default='deepstream',
+                       help='Video source type (default: deepstream)')
+    parser.add_argument('--device', default='/dev/video2', 
+                       help='Video device path (default: /dev/video2)')
     
     args = parser.parse_args()
     

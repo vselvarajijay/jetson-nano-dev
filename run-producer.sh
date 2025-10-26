@@ -47,22 +47,22 @@ kill_existing_producers() {
 check_camera() {
     echo "🔍 Checking camera availability..."
     
-    if [ ! -e "/dev/video4" ]; then
-        echo "❌ Camera device /dev/video4 not found!"
+    if [ ! -e "/dev/video2" ]; then
+        echo "❌ Camera device /dev/video2 not found!"
         echo "Available video devices:"
         ls -la /dev/video* 2>/dev/null || echo "No video devices found"
         exit 1
     fi
     
     # Check if camera is busy
-    CAMERA_USERS=$(lsof /dev/video4 2>/dev/null | grep -v COMMAND | wc -l)
+    CAMERA_USERS=$(lsof /dev/video2 2>/dev/null | grep -v COMMAND | wc -l)
     if [ "$CAMERA_USERS" -gt 0 ]; then
-        echo "⚠️  Camera /dev/video4 is busy. Users:"
-        lsof /dev/video4 2>/dev/null | grep -v COMMAND
+        echo "⚠️  Camera /dev/video2 is busy. Users:"
+        lsof /dev/video2 2>/dev/null | grep -v COMMAND
         echo "🛑 Attempting to free camera..."
         
         # Kill processes using the camera
-        CAMERA_PIDS=$(lsof /dev/video4 2>/dev/null | grep -v COMMAND | awk '{print $2}' | sort -u)
+        CAMERA_PIDS=$(lsof /dev/video2 2>/dev/null | grep -v COMMAND | awk '{print $2}' | sort -u)
         for pid in $CAMERA_PIDS; do
             echo "   Killing camera user PID: $pid"
             kill $pid 2>/dev/null
@@ -71,7 +71,7 @@ check_camera() {
         sleep 2
         
         # Check again
-        CAMERA_USERS=$(lsof /dev/video4 2>/dev/null | grep -v COMMAND | wc -l)
+        CAMERA_USERS=$(lsof /dev/video2 2>/dev/null | grep -v COMMAND | wc -l)
         if [ "$CAMERA_USERS" -gt 0 ]; then
             echo "❌ Camera still busy after cleanup attempt"
             echo "You may need to manually kill processes or restart the system"
@@ -79,14 +79,14 @@ check_camera() {
         fi
     fi
     
-    echo "✅ Camera /dev/video4 is available"
+    echo "✅ Camera /dev/video2 is available"
 }
 
 # Function to test basic GStreamer pipeline
 test_pipeline() {
     echo "🔍 Testing basic GStreamer pipeline..."
     
-    timeout 3 gst-launch-1.0 v4l2src device=/dev/video4 ! video/x-raw,width=640,height=480,framerate=30/1 ! videoconvert ! fakesink >/dev/null 2>&1
+    timeout 3 gst-launch-1.0 v4l2src device=/dev/video2 ! video/x-raw,width=640,height=480,framerate=30/1 ! videoconvert ! fakesink >/dev/null 2>&1
     
     if [ $? -eq 124 ]; then
         echo "✅ Basic pipeline test successful (timeout expected)"
