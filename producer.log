@@ -23,7 +23,11 @@ INFO:__main__:Pipeline state change result: <enum GST_STATE_CHANGE_ASYNC of type
 🎥 Producer: Frame #10 captured!
 INFO:__main__:Pipeline state: (<enum GST_STATE_CHANGE_SUCCESS of type Gst.StateChangeReturn>, state=<enum GST_STATE_PLAYING of type Gst.State>, pending=<enum GST_STATE_VOID_PENDING of type Gst.State>)
 INFO:__main__:Starting GStreamer main loop...
-📊 Producer: 44 frames | Real-time FPS: 22.0 | Avg FPS: 22.0 | Runtime: 2.0s
+INFO:__main__:Pipeline state changed: null -> ready
+INFO:__main__:Pipeline state changed: ready -> paused
+INFO:__main__:Stream started
+INFO:__main__:Pipeline state changed: paused -> playing
+📊 Producer: 43 frames | Real-time FPS: 21.5 | Avg FPS: 21.5 | Runtime: 2.0s
 INFO:__main__:============================================================
 INFO:__main__:🎥 UDP RTP STREAM READY
 INFO:__main__:============================================================
@@ -33,29 +37,16 @@ INFO:__main__:============================================================
 INFO:__main__:Use GStreamer consumer to view the stream
 INFO:__main__:Press Ctrl+C to stop
 INFO:__main__:============================================================
-📊 Producer: 104 frames | Real-time FPS: 30.0 | Avg FPS: 26.0 | Runtime: 4.0s
-📊 Producer: 164 frames | Real-time FPS: 30.0 | Avg FPS: 27.3 | Runtime: 6.0s
-📊 Producer: 224 frames | Real-time FPS: 30.0 | Avg FPS: 28.0 | Runtime: 8.0s
-📊 Producer: 284 frames | Real-time FPS: 30.0 | Avg FPS: 28.4 | Runtime: 10.0s
-📊 Producer: 344 frames | Real-time FPS: 30.0 | Avg FPS: 28.6 | Runtime: 12.0s
-📊 Producer: 404 frames | Real-time FPS: 30.0 | Avg FPS: 28.8 | Runtime: 14.0s
-📊 Producer: 464 frames | Real-time FPS: 29.9 | Avg FPS: 29.0 | Runtime: 16.0s
-📊 Producer: 525 frames | Real-time FPS: 30.1 | Avg FPS: 29.1 | Runtime: 18.0s
-📊 Producer: 585 frames | Real-time FPS: 30.0 | Avg FPS: 29.2 | Runtime: 20.0s
-📊 Producer: 645 frames | Real-time FPS: 30.0 | Avg FPS: 29.3 | Runtime: 22.1s
-📊 Producer: 705 frames | Real-time FPS: 30.0 | Avg FPS: 29.3 | Runtime: 24.1s
-📊 Producer: 765 frames | Real-time FPS: 30.0 | Avg FPS: 29.4 | Runtime: 26.1s
-📊 Producer: 825 frames | Real-time FPS: 30.0 | Avg FPS: 29.4 | Runtime: 28.1s
-📊 Producer: 885 frames | Real-time FPS: 30.0 | Avg FPS: 29.4 | Runtime: 30.1s
-📊 Producer: 945 frames | Real-time FPS: 30.0 | Avg FPS: 29.5 | Runtime: 32.1s
-📊 Producer: 1005 frames | Real-time FPS: 30.0 | Avg FPS: 29.5 | Runtime: 34.1s
-📊 Producer: 1065 frames | Real-time FPS: 30.0 | Avg FPS: 29.5 | Runtime: 36.1s
-📊 Producer: 1125 frames | Real-time FPS: 30.0 | Avg FPS: 29.6 | Runtime: 38.1s
-📊 Producer: 1185 frames | Real-time FPS: 30.0 | Avg FPS: 29.6 | Runtime: 40.1s
-📊 Producer: 1245 frames | Real-time FPS: 30.0 | Avg FPS: 29.6 | Runtime: 42.1s
-📊 Producer: 1305 frames | Real-time FPS: 30.0 | Avg FPS: 29.6 | Runtime: 44.1s
-📊 Producer: 1365 frames | Real-time FPS: 30.0 | Avg FPS: 29.6 | Runtime: 46.1s
-📊 Producer: 1425 frames | Real-time FPS: 30.0 | Avg FPS: 29.6 | Runtime: 48.1s
-📊 Producer: 1485 frames | Real-time FPS: 30.0 | Avg FPS: 29.7 | Runtime: 50.1s
-📊 Producer: 1545 frames | Real-time FPS: 30.0 | Avg FPS: 29.7 | Runtime: 52.1s
-📊 Producer: 1605 frames | Real-time FPS: 30.0 | Avg FPS: 29.7 | Runtime: 54.1s
+📊 Producer: 103 frames | Real-time FPS: 30.0 | Avg FPS: 25.7 | Runtime: 4.0s
+📊 Producer: 163 frames | Real-time FPS: 30.0 | Avg FPS: 27.2 | Runtime: 6.0s
+📊 Producer: 223 frames | Real-time FPS: 30.0 | Avg FPS: 27.9 | Runtime: 8.0s
+📊 Producer: 283 frames | Real-time FPS: 30.0 | Avg FPS: 28.3 | Runtime: 10.0s
+📊 Producer: 343 frames | Real-time FPS: 30.0 | Avg FPS: 28.6 | Runtime: 12.0s
+📊 Producer: 403 frames | Real-time FPS: 30.0 | Avg FPS: 28.8 | Runtime: 14.0s
+📊 Producer: 463 frames | Real-time FPS: 30.0 | Avg FPS: 28.9 | Runtime: 16.0s
+📊 Producer: 523 frames | Real-time FPS: 30.0 | Avg FPS: 29.0 | Runtime: 18.0s
+📊 Producer: 583 frames | Real-time FPS: 30.0 | Avg FPS: 29.1 | Runtime: 20.0s
+📊 Producer: 643 frames | Real-time FPS: 30.0 | Avg FPS: 29.2 | Runtime: 22.0s
+📊 Producer: 703 frames | Real-time FPS: 30.0 | Avg FPS: 29.3 | Runtime: 24.0s
+📊 Producer: 763 frames | Real-time FPS: 30.0 | Avg FPS: 29.3 | Runtime: 26.0s
+📊 Producer: 823 frames | Real-time FPS: 30.0 | Avg FPS: 29.4 | Runtime: 28.0s

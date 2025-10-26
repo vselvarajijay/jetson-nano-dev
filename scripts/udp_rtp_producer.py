@@ -67,6 +67,25 @@ class UDPRTPProducer:
             sys.stdout.flush()
         
         return Gst.PadProbeReturn.OK
+    
+    def on_bus_message(self, bus, message):
+        """Handle GStreamer bus messages for debugging"""
+        if message.type == Gst.MessageType.ERROR:
+            err, debug = message.parse_error()
+            logger.error(f"GStreamer Error: {err}")
+            logger.error(f"Debug info: {debug}")
+        elif message.type == Gst.MessageType.WARNING:
+            warn, debug = message.parse_warning()
+            logger.warning(f"GStreamer Warning: {warn}")
+            logger.warning(f"Debug info: {debug}")
+        elif message.type == Gst.MessageType.STATE_CHANGED:
+            old_state, new_state, pending_state = message.parse_state_changed()
+            if message.src == self.pipeline:
+                logger.info(f"Pipeline state changed: {old_state.value_nick} -> {new_state.value_nick}")
+        elif message.type == Gst.MessageType.STREAM_START:
+            logger.info("Stream started")
+        elif message.type == Gst.MessageType.EOS:
+            logger.info("End of stream")
         
     def get_local_ip(self):
         """Get local IP address for network access"""
@@ -108,6 +127,11 @@ class UDPRTPProducer:
             
         logger.info(f"Setting up GStreamer pipeline: {pipeline_str.strip()}")
         self.pipeline = Gst.parse_launch(pipeline_str)
+        
+        # Add bus message handler for debugging
+        bus = self.pipeline.get_bus()
+        bus.add_signal_watch()
+        bus.connect("message", self.on_bus_message)
         
         # Add probe to identity element for frame counting
         identity = self.pipeline.get_by_name("frame_counter")
