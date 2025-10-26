@@ -107,8 +107,9 @@ class UDPRTPProducer:
             videoconvert !
             identity name=frame_counter !
             x264enc tune=zerolatency !
+            h264parse !
             rtph264pay !
-            udpsink host={self.host} port={self.udp_port}
+            udpsink host=100.94.31.62 port={self.udp_port}
             """
         elif source_type == "deepstream":
             # DeepStream pipeline with UDP RTP streaming and frame counting
