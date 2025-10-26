@@ -128,7 +128,7 @@ class UDPRTPProducer:
             x264enc tune=zerolatency bitrate=2000 speed-preset=ultrafast threads=4 !
             h264parse !
             rtph264pay pt=96 !
-            udpsink host={self.host} port={self.udp_port}
+            udpsink host={self.host} port={self.udp_port} bind-address=0.0.0.0
             """
         else:
             raise ValueError(f"Unknown source type: {source_type}")

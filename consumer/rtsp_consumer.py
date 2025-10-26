@@ -181,7 +181,7 @@ class RTSPConsumer:
             logger.info(f"UDP connection: host={host}, port={port}")
             
             pipeline_str = f"""
-            udpsrc port={port} !
+            udpsrc port={port} address={host} !
             application/x-rtp,encoding-name=H264,payload=96 !
             rtph264depay !
             h264parse !
@@ -190,7 +190,7 @@ class RTSPConsumer:
             video/x-raw,format=GRAY8 !
             videoconvert !
             video/x-raw,format=BGR !
-            appsink emit-signals=true max-buffers=1 drop=true sync=false
+            appsink name=sink emit-signals=true max-buffers=1 drop=true sync=false
             """
         
         logger.info(f"Setting up RTSP consumer pipeline: {pipeline_str.strip()}")
@@ -202,9 +202,9 @@ class RTSPConsumer:
         bus.connect("message", self.on_bus_message)
         
         # Get appsink element
-        appsink = self.pipeline.get_by_name("appsink0")
+        appsink = self.pipeline.get_by_name("sink")
         if not appsink:
-            raise RuntimeError("Could not find appsink element in pipeline")
+            raise RuntimeError("Could not find appsink element 'sink' in pipeline")
             
         appsink.connect("new-sample", self.on_new_sample)
         logger.info("Connected appsink callback")
