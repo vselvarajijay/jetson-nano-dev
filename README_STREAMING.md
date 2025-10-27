@@ -44,7 +44,7 @@ export RTSP_URL=udp://JETSON_IP:8554
 
 **Using Python directly**:
 ```bash
-RTSP_URL=udp://JETSON_IP:8554 python3 consumer/rtsp_consumer.py
+RTSP_URL=udp://JETSON_IP:8554 python3 consumer/udp_rtp_consumer.py
 ```
 
 ## Important Notes

@@ -14,7 +14,7 @@ kill_existing_consumers() {
     echo "🔍 Checking for existing consumer processes..."
     
     # Find Python processes running the consumer
-    CONSUMER_PIDS=$(ps aux | grep -E "python.*rtsp_consumer" | grep -v grep | awk '{print $2}')
+    CONSUMER_PIDS=$(ps aux | grep -E "python.*udp_rtp_consumer" | grep -v grep | awk '{print $2}')
     
     if [ -n "$CONSUMER_PIDS" ]; then
         echo "⚠️  Found existing consumer processes: $CONSUMER_PIDS"
@@ -71,8 +71,8 @@ check_environment() {
     echo "🔍 Checking environment..."
     
     # Check if we're in the right directory
-    if [ ! -f "consumer/rtsp_consumer.py" ]; then
-        echo "❌ Error: consumer/rtsp_consumer.py not found!"
+    if [ ! -f "consumer/udp_rtp_consumer.py" ]; then
+        echo "❌ Error: consumer/udp_rtp_consumer.py not found!"
         echo "Please run this script from the project root directory"
         exit 1
     fi

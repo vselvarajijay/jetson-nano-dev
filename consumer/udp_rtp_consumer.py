@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-RTSP Consumer - Refactored
-Connects to UDP RTP stream and processes frames with DeepStream
+UDP RTP Consumer
+Receives UDP RTP streams and processes frames with DeepStream
 Uses proper Python GStreamer pipeline construction (no parse_launch)
 Matches the producer's style
 """
@@ -24,9 +24,9 @@ Gst.init(None)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class RTSPConsumer:
-    def __init__(self, rtsp_url):
-        self.rtsp_url = rtsp_url
+class UDPRTPConsumer:
+    def __init__(self, url):
+        self.url = url
         self.frame = None
         self.lock = threading.Lock()
         self.pipeline = None
@@ -145,8 +145,8 @@ class RTSPConsumer:
         print("=" * 60)
         
         # Parse URL for port
-        if self.rtsp_url.startswith('udp://'):
-            url_parts = self.rtsp_url[6:]  # Remove 'udp://'
+        if self.url.startswith('udp://'):
+            url_parts = self.url[6:]  # Remove 'udp://'
             if ':' in url_parts:
                 host, port_str = url_parts.split(':', 1)
                 port = int(port_str)
@@ -303,7 +303,7 @@ class RTSPConsumer:
         return True
     
     def run(self):
-        """Run the RTSP consumer"""
+        """Run the UDP RTP consumer"""
         try:
             # Setup GStreamer pipeline
             if not self.setup_gstreamer_pipeline():
@@ -324,7 +324,7 @@ class RTSPConsumer:
             print("\n" + "=" * 60)
             print("🎥 CONSUMER RECEIVING FROM PRODUCER")
             print("=" * 60)
-            print(f"Stream URL: {self.rtsp_url}")
+            print(f"Stream URL: {self.url}")
             print("Format: Grayscale 240x240 → BGR for analysis")
             print("=" * 60)
             print("Press Ctrl+C to stop")
@@ -364,11 +364,11 @@ def main():
     
     # Force immediate output
     print("=" * 60)
-    print("🚀 RTSP CONSUMER STARTING")
+    print("🚀 UDP RTP CONSUMER STARTING")
     print("=" * 60)
     sys.stdout.flush()
     
-    # Get URL from environment variable ONLY
+    # Get URL from environment variable
     env_url = os.getenv('RTSP_URL')
     
     # Use environment variable or default
@@ -400,11 +400,12 @@ def main():
     print(f"✅ URL validation passed: {url}")
     sys.stdout.flush()
     
-    # Create RTSP consumer instance
-    consumer = RTSPConsumer(rtsp_url=url)
+    # Create UDP RTP consumer instance
+    consumer = UDPRTPConsumer(url=url)
     
     # Run the consumer
     consumer.run()
 
 if __name__ == "__main__":
     main()
+

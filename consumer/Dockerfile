@@ -66,7 +66,7 @@ RUN pip3 install --no-cache-dir --upgrade pip && \
 WORKDIR /app
 
 # Copy application files
-COPY consumer/rtsp_consumer.py /app/
+COPY consumer/udp_rtp_consumer.py /app/
 COPY consumer/entrypoint.sh /app/
 RUN chmod +x /app/entrypoint.sh
 
