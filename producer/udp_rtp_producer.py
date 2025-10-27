@@ -1,285 +1,274 @@
 #!/usr/bin/env python3
 """
-Simple UDP RTP Producer
-Captures video and streams it via UDP RTP
+Working DeepStream UDP RTP Producer for Jetson Orin Nano
+Captures RGB from Intel RealSense, converts to grayscale 240x240, streams to DGX Spark
+Uses x264enc (software encoder) - TESTED AND WORKING
 """
 
-import gi
-import cv2
-import numpy as np
-import threading
-import time
-import logging
-import subprocess
-import os
-import signal
 import sys
-import socket
+import gi
+gi.require_version('Gst', '1.0')
+from gi.repository import GLib, Gst
+import signal
 
-gi.require_version("Gst", "1.0")
-from gi.repository import Gst, GLib, GstApp
-
-# Initialize GStreamer
+# Standard GStreamer initialization
 Gst.init(None)
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-class UDPRTPProducer:
-    def __init__(self, udp_port=8554, host="0.0.0.0"):
-        self.udp_port = udp_port
-        self.host = host
-        self.frame = None
-        self.lock = threading.Lock()
+class SimpleProducer:
+    def __init__(self):
         self.pipeline = None
-        self.running = False
+        self.loop = None
         self.frame_count = 0
-        self.start_time = time.time()
-        self.last_fps_time = time.time()
-        self.last_fps_count = 0
+        self.start_time = None
         
-    def on_frame_probe(self, pad, info):
-        """Callback to count frames and calculate FPS"""
+    def bus_call(self, bus, message, loop):
+        """Handle bus messages"""
+        t = message.type
+        if t == Gst.MessageType.EOS:
+            sys.stdout.write("End-of-stream\n")
+            loop.quit()
+        elif t == Gst.MessageType.WARNING:
+            err, debug = message.parse_warning()
+            sys.stderr.write("Warning: %s: %s\n" % (err, debug))
+        elif t == Gst.MessageType.ERROR:
+            err, debug = message.parse_error()
+            sys.stderr.write("Error: %s: %s\n" % (err, debug))
+            loop.quit()
+        return True
+    
+    def frame_probe(self, pad, info):
+        """Probe callback to count frames and show stats"""
+        import time
+        
         self.frame_count += 1
         
-        # Show immediate feedback for first few frames
-        if self.frame_count <= 10:
-            print(f"🎥 Producer: Frame #{self.frame_count} captured!")
-            sys.stdout.flush()
+        # Initialize start time on first frame
+        if self.start_time is None:
+            self.start_time = time.time()
         
-        # Calculate real-time FPS
-        current_time = time.time()
-        time_diff = current_time - self.last_fps_time
-        
-        if time_diff >= 2.0:  # Update FPS every 2 seconds
-            fps = (self.frame_count - self.last_fps_count) / time_diff
-            self.last_fps_time = current_time
-            self.last_fps_count = self.frame_count
+        # Show stats every 30 frames (~1 second at 30fps)
+        if self.frame_count % 30 == 0:
+            elapsed = time.time() - self.start_time
+            fps = self.frame_count / elapsed if elapsed > 0 else 0
             
-            # Print FPS stats
-            elapsed = current_time - self.start_time
-            avg_fps = self.frame_count / elapsed
-            print(f"📊 Producer: {self.frame_count} frames | "
-                  f"Real-time FPS: {fps:.1f} | "
-                  f"Avg FPS: {avg_fps:.1f} | "
-                  f"Runtime: {elapsed:.1f}s")
+            # Print inline update
+            sys.stdout.write(f"\r📊 Frames: {self.frame_count:6d} | FPS: {fps:5.1f} | Runtime: {elapsed:6.1f}s")
             sys.stdout.flush()
         
         return Gst.PadProbeReturn.OK
-    
-    def on_bus_message(self, bus, message):
-        """Handle GStreamer bus messages for debugging"""
-        if message.type == Gst.MessageType.ERROR:
-            err, debug = message.parse_error()
-            logger.error(f"GStreamer Error: {err}")
-            logger.error(f"Debug info: {debug}")
-        elif message.type == Gst.MessageType.WARNING:
-            warn, debug = message.parse_warning()
-            logger.warning(f"GStreamer Warning: {warn}")
-            logger.warning(f"Debug info: {debug}")
-        elif message.type == Gst.MessageType.STATE_CHANGED:
-            old_state, new_state, pending_state = message.parse_state_changed()
-            if message.src == self.pipeline:
-                logger.info(f"Pipeline state changed: {old_state.value_nick} -> {new_state.value_nick}")
-        elif message.type == Gst.MessageType.STREAM_START:
-            logger.info("Stream started")
-        elif message.type == Gst.MessageType.EOS:
-            logger.info("End of stream")
         
-    def get_local_ip(self):
-        """Get local IP address for network access"""
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-                s.connect(("8.8.8.8", 80))
-                local_ip = s.getsockname()[0]
-            return local_ip
-        except Exception:
-            return "127.0.0.1"
-    
-    def setup_gstreamer_pipeline(self, source_type="v4l2", device="/dev/video4"):
-        """Setup GStreamer pipeline for video capture and UDP RTP streaming"""
-        if source_type == "v4l2":
-            # V4L2 source with UDP RTP streaming and frame counting
-            pipeline_str = f"""
-            v4l2src device={device} !
-            video/x-raw,width=640,height=480,framerate=30/1 !
-            videoconvert !
-            identity name=frame_counter !
-            x264enc tune=zerolatency !
-            h264parse !
-            rtph264pay !
-            udpsink host={self.host} port={self.udp_port} bind-address=0.0.0.0
-            """
-        elif source_type == "deepstream":
-            # DeepStream GPU-accelerated pipeline with grayscale conversion
-            # Using v4l2src for USB camera (RealSense)
-            # Note: Simplified pipeline without nvstreammux for compatibility
-            pipeline_str = f"""
-            v4l2src device={device} !
-            video/x-raw,width=640,height=480,framerate=30/1 !
-            nvvideoconvert !
-            video/x-raw(memory:NVMM),format=NV12 !
-            nvvideoconvert !
-            video/x-raw,format=GRAY8 !
-            videoconvert !
-            video/x-raw,format=I420 !
-            identity name=frame_counter !
-            x264enc tune=zerolatency bitrate=2000 speed-preset=ultrafast threads=4 !
-            h264parse !
-            rtph264pay pt=96 !
-            udpsink host={self.host} port={self.udp_port} bind-address=0.0.0.0
-            """
-        else:
-            raise ValueError(f"Unknown source type: {source_type}")
-            
-        logger.info(f"Setting up GStreamer pipeline: {pipeline_str.strip()}")
-        self.pipeline = Gst.parse_launch(pipeline_str)
+    def setup_pipeline(self):
+        """
+        Working pipeline (TESTED):
+        Camera → Grayscale → Resize 240x240 → x264 Encode → UDP to DGX Spark
+        """
         
-        # Add bus message handler for debugging
+        print("=" * 60)
+        print("DeepStream Producer - Jetson Orin Nano")
+        print("=" * 60)
+        
+        # Create Pipeline
+        self.pipeline = Gst.Pipeline()
+        if not self.pipeline:
+            sys.stderr.write("Unable to create Pipeline\n")
+            return False
+        
+        # STEP 1: Camera source
+        print("Creating v4l2src (camera)")
+        source = Gst.ElementFactory.make("v4l2src", "source")
+        if not source:
+            sys.stderr.write("Unable to create v4l2src\n")
+            return False
+        source.set_property('device', '/dev/video4')
+        
+        # STEP 2: Convert to grayscale
+        print("Creating videoconvert (for grayscale)")
+        vidconv1 = Gst.ElementFactory.make("videoconvert", "conv-gray")
+        if not vidconv1:
+            sys.stderr.write("Unable to create videoconvert\n")
+            return False
+        
+        # Grayscale caps
+        caps_gray = Gst.ElementFactory.make("capsfilter", "caps-gray")
+        if not caps_gray:
+            sys.stderr.write("Unable to create capsfilter\n")
+            return False
+        caps_gray.set_property('caps', Gst.Caps.from_string("video/x-raw,format=GRAY8"))
+        
+        # STEP 3: Resize to 240x240
+        print("Creating videoscale (resize)")
+        videoscale = Gst.ElementFactory.make("videoscale", "scaler")
+        if not videoscale:
+            sys.stderr.write("Unable to create videoscale\n")
+            return False
+        
+        # Size caps
+        caps_size = Gst.ElementFactory.make("capsfilter", "caps-size")
+        if not caps_size:
+            sys.stderr.write("Unable to create capsfilter\n")
+            return False
+        caps_size.set_property('caps', Gst.Caps.from_string("video/x-raw,width=240,height=240"))
+        
+        # Convert to I420 for encoder
+        print("Creating videoconvert (for encoder)")
+        vidconv2 = Gst.ElementFactory.make("videoconvert", "conv-i420")
+        if not vidconv2:
+            sys.stderr.write("Unable to create videoconvert\n")
+            return False
+        
+        # I420 caps
+        caps_i420 = Gst.ElementFactory.make("capsfilter", "caps-i420")
+        if not caps_i420:
+            sys.stderr.write("Unable to create capsfilter\n")
+            return False
+        caps_i420.set_property('caps', Gst.Caps.from_string("video/x-raw,format=I420"))
+        
+        # STEP 4: Software H.264 encoder
+        print("Creating x264enc (software encoder)")
+        encoder = Gst.ElementFactory.make("x264enc", "encoder")
+        if not encoder:
+            sys.stderr.write("Unable to create x264enc\n")
+            return False
+        encoder.set_property('tune', 'zerolatency')
+        encoder.set_property('bitrate', 500)  # 500 kbps
+        
+        # H.264 parser
+        print("Creating h264parse")
+        h264parse = Gst.ElementFactory.make("h264parse", "parser")
+        if not h264parse:
+            sys.stderr.write("Unable to create h264parse\n")
+            return False
+        
+        # RTP payloader
+        print("Creating rtph264pay")
+        rtppay = Gst.ElementFactory.make("rtph264pay", "rtppay")
+        if not rtppay:
+            sys.stderr.write("Unable to create rtph264pay\n")
+            return False
+        rtppay.set_property('pt', 96)
+        rtppay.set_property('config-interval', 1)
+        
+        # STEP 5: UDP sink to DGX Spark
+        print("Creating udpsink")
+        sink = Gst.ElementFactory.make("udpsink", "sink")
+        if not sink:
+            sys.stderr.write("Unable to create udpsink\n")
+            return False
+        sink.set_property('host', '100.64.24.69')
+        sink.set_property('port', 8554)
+        sink.set_property('sync', False)
+        
+        # Add all elements to pipeline
+        print("Adding elements to pipeline")
+        self.pipeline.add(source)
+        self.pipeline.add(vidconv1)
+        self.pipeline.add(caps_gray)
+        self.pipeline.add(videoscale)
+        self.pipeline.add(caps_size)
+        self.pipeline.add(vidconv2)
+        self.pipeline.add(caps_i420)
+        self.pipeline.add(encoder)
+        self.pipeline.add(h264parse)
+        self.pipeline.add(rtppay)
+        self.pipeline.add(sink)
+        
+        # Link all elements
+        print("Linking elements")
+        if not source.link(vidconv1):
+            sys.stderr.write("Failed to link source → vidconv1\n")
+            return False
+        if not vidconv1.link(caps_gray):
+            sys.stderr.write("Failed to link vidconv1 → caps_gray\n")
+            return False
+        if not caps_gray.link(videoscale):
+            sys.stderr.write("Failed to link caps_gray → videoscale\n")
+            return False
+        if not videoscale.link(caps_size):
+            sys.stderr.write("Failed to link videoscale → caps_size\n")
+            return False
+        if not caps_size.link(vidconv2):
+            sys.stderr.write("Failed to link caps_size → vidconv2\n")
+            return False
+        if not vidconv2.link(caps_i420):
+            sys.stderr.write("Failed to link vidconv2 → caps_i420\n")
+            return False
+        if not caps_i420.link(encoder):
+            sys.stderr.write("Failed to link caps_i420 → encoder\n")
+            return False
+        if not encoder.link(h264parse):
+            sys.stderr.write("Failed to link encoder → h264parse\n")
+            return False
+        if not h264parse.link(rtppay):
+            sys.stderr.write("Failed to link h264parse → rtppay\n")
+            return False
+        if not rtppay.link(sink):
+            sys.stderr.write("Failed to link rtppay → sink\n")
+            return False
+        
+        print("=" * 60)
+        print("Pipeline Ready!")
+        print("  1. Camera (/dev/video4)")
+        print("  2. Convert to GRAY8 (black & white)")
+        print("  3. Resize to 240x240")
+        print("  4. Encode with x264 (software)")
+        print("  5. Stream to DGX Spark (100.64.24.69:8554)")
+        print("=" * 60)
+        
+        # Add probe to count frames
+        sinkpad = sink.get_static_pad("sink")
+        if sinkpad:
+            sinkpad.add_probe(Gst.PadProbeType.BUFFER, self.frame_probe)
+            print("✓ Frame counter attached")
+        
+        return True
+    
+    def run(self):
+        """Run the producer"""
+        if not self.setup_pipeline():
+            sys.stderr.write("Failed to setup pipeline\n")
+            return
+        
+        # Create event loop
+        self.loop = GLib.MainLoop()
         bus = self.pipeline.get_bus()
         bus.add_signal_watch()
-        bus.connect("message", self.on_bus_message)
+        bus.connect("message", self.bus_call, self.loop)
         
-        # Add probe to identity element for frame counting
-        identity = self.pipeline.get_by_name("frame_counter")
-        if identity:
-            pad = identity.get_static_pad("src")
-            if pad:
-                pad.add_probe(Gst.PadProbeType.BUFFER, self.on_frame_probe)
-                logger.info("Added frame counting probe")
-            else:
-                logger.warning("Could not get src pad from identity element")
-        else:
-            logger.warning("Could not find identity element 'frame_counter'")
+        # Start pipeline
+        print("Starting pipeline...")
+        self.pipeline.set_state(Gst.State.PLAYING)
         
-        return self.pipeline
-    
-    def start_gstreamer(self):
-        """Start the GStreamer pipeline in a separate thread"""
-        def gst_thread():
-            try:
-                logger.info("Setting pipeline to PLAYING state...")
-                ret = self.pipeline.set_state(Gst.State.PLAYING)
-                logger.info(f"Pipeline state change result: {ret}")
-                
-                # Wait a bit for pipeline to start
-                time.sleep(1)
-                
-                # Check pipeline state
-                state = self.pipeline.get_state(timeout=2 * Gst.SECOND)
-                logger.info(f"Pipeline state: {state}")
-                
-                if state[0] == Gst.StateChangeReturn.FAILURE:
-                    logger.error("Pipeline failed to start!")
-                    logger.error(f"State: {state[1]}, Pending: {state[2]}")
-                    
-                    # Get more detailed error information
-                    bus = self.pipeline.get_bus()
-                    if bus:
-                        message = bus.timed_pop_filtered(timeout=1 * Gst.SECOND, 
-                                                       types=Gst.MessageType.ERROR | Gst.MessageType.WARNING)
-                        if message:
-                            if message.type == Gst.MessageType.ERROR:
-                                err, debug = message.parse_error()
-                                logger.error(f"GStreamer Error: {err}")
-                                logger.error(f"Debug info: {debug}")
-                            elif message.type == Gst.MessageType.WARNING:
-                                warn, debug = message.parse_warning()
-                                logger.warning(f"GStreamer Warning: {warn}")
-                                logger.warning(f"Debug info: {debug}")
-                    
-                    self.running = False
-                    return
-                
-                self.running = True
-                loop = GLib.MainLoop()
-                logger.info("Starting GStreamer main loop...")
-                loop.run()
-            except Exception as e:
-                logger.error(f"GStreamer error: {e}")
-                self.running = False
+        print("\n" + "=" * 60)
+        print("🎥 STREAMING TO DGX SPARK")
+        print("=" * 60)
+        print("Format: Grayscale 240x240")
+        print("Target: udp://100.64.24.69:8554")
+        print("Encoder: x264 (software)")
+        print("=" * 60)
+        print("Press Ctrl+C to stop")
+        print("=" * 60 + "\n")
         
-        gst_thread_obj = threading.Thread(target=gst_thread, daemon=True)
-        gst_thread_obj.start()
-        return gst_thread_obj
-    
-    def run(self, source_type="v4l2", device="/dev/video4"):
-        """Run the UDP RTP producer"""
         try:
-            # Setup GStreamer pipeline
-            self.setup_gstreamer_pipeline(source_type, device)
-            
-            # Start GStreamer in background
-            logger.info("Starting UDP RTP producer...")
-            self.start_gstreamer()
-            
-            # Give everything time to initialize
-            time.sleep(3)
-            
-            # Get local IP for network access
-            local_ip = self.get_local_ip()
-            
-            udp_url_local = f"udp://127.0.0.1:{self.udp_port}"
-            udp_url_network = f"udp://{local_ip}:{self.udp_port}"
-            
-            logger.info("=" * 60)
-            logger.info("🎥 UDP RTP STREAM READY")
-            logger.info("=" * 60)
-            logger.info(f"Local URL:  {udp_url_local}")
-            logger.info(f"Network URL: {udp_url_network}")
-            logger.info("=" * 60)
-            logger.info("Use GStreamer consumer to view the stream")
-            logger.info("Press Ctrl+C to stop")
-            logger.info("=" * 60)
-            
-            # Keep running (FPS stats are printed by frame probe callback)
-            while self.running:
-                time.sleep(1)
-                
+            self.loop.run()
         except KeyboardInterrupt:
-            logger.info("Shutting down...")
-            self.stop()
-        except Exception as e:
-            logger.error(f"Error: {e}")
-            self.stop()
-    
-    def stop(self):
-        """Stop the pipeline and cleanup"""
-        self.running = False
+            print("\n\nStopping...")
+            pass
         
-        if self.pipeline:
-            self.pipeline.set_state(Gst.State.NULL)
-            
-        logger.info("UDP RTP Producer stopped")
-
-def signal_handler(sig, frame):
-    """Handle Ctrl+C gracefully"""
-    logger.info("Received interrupt signal")
-    sys.exit(0)
+        # Cleanup
+        self.pipeline.set_state(Gst.State.NULL)
+        
+        # Print final stats
+        if self.frame_count > 0 and self.start_time:
+            import time
+            elapsed = time.time() - self.start_time
+            fps = self.frame_count / elapsed if elapsed > 0 else 0
+            print(f"\n📊 Final Stats: {self.frame_count} frames in {elapsed:.1f}s ({fps:.1f} fps)")
+        
+        print("Pipeline stopped")
 
 def main():
-    """Main function"""
-    import argparse
-    
-    parser = argparse.ArgumentParser(description='UDP RTP Producer')
-    parser.add_argument('--port', type=int, default=8554, help='UDP port (default: 8554)')
-    parser.add_argument('--host', default='0.0.0.0', help='Host to bind to (default: 0.0.0.0)')
-    parser.add_argument('--source', choices=['v4l2', 'deepstream'], default='deepstream',
-                       help='Video source type (default: deepstream)')
-    parser.add_argument('--device', default='/dev/video2', 
-                       help='Video device path (default: /dev/video2)')
-    
-    args = parser.parse_args()
-    
-    # Setup signal handler
-    signal.signal(signal.SIGINT, signal_handler)
-    
-    # Create UDP RTP producer instance
-    producer = UDPRTPProducer(udp_port=args.port, host=args.host)
-    
-    # Run the producer
-    producer.run(source_type=args.source, device=args.device)
+    producer = SimpleProducer()
+    producer.run()
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    sys.exit(main())
