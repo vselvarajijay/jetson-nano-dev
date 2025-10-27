@@ -107,8 +107,8 @@ start_producer() {
     # Set up signal handler for graceful shutdown
     trap 'echo -e "\n🛑 Received interrupt signal. Shutting down..."; exit 0' INT TERM
     
-    # Start the producer
-    python3 producer/udp_rtp_producer.py
+    # Start the producer with DGX Spark IP
+    python3 producer/udp_rtp_producer.py --host 100.64.24.69 --port 8554
     
     # Check exit status
     EXIT_CODE=$?

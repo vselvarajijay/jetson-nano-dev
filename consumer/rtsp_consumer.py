@@ -181,7 +181,7 @@ class RTSPConsumer:
             logger.info(f"UDP connection: host={host}, port={port}")
             
             pipeline_str = f"""
-            udpsrc port={port} address={host} !
+            udpsrc port={port} !
             application/x-rtp,encoding-name=H264,payload=96 !
             rtph264depay !
             h264parse !

@@ -27,7 +27,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class UDPRTPProducer:
-    def __init__(self, udp_port=8554, host="127.0.0.1"):
+    def __init__(self, udp_port=8554, host="0.0.0.0"):
         self.udp_port = udp_port
         self.host = host
         self.frame = None

@@ -6,7 +6,7 @@ echo "🧪 Testing UDP consumer with grayscale stream"
 echo "=============================================="
 
 # Test command
-gst-launch-1.0 -v udpsrc port=8554 address=0.0.0.0 ! \
+gst-launch-1.0 -v udpsrc port=8554 ! \
     application/x-rtp,encoding-name=H264,payload=96 ! \
     rtph264depay ! \
     h264parse ! \
