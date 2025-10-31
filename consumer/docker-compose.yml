@@ -14,6 +14,7 @@ services:
       - GST_DEBUG=2
       - PYTHONUNBUFFERED=1
       - RTSP_URL=udp://127.0.0.1:8554  # UDP stream URL
+      - VJEPA_SERVICE_URL=http://localhost:8000  # VJEPA2 inference service URL
     volumes:
       # Mount output directory for saving frames
       - ./output:/app/output
