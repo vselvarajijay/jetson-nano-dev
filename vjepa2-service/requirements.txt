@@ -1,0 +1,14 @@
+transformers[video]==4.57.1
+huggingface-hub
+tokenizers
+safetensors
+av
+numpy
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart
+pydantic
+opencv-python-headless
+requests
+# NOTE: Do NOT pin torchvision here; the NGC image already includes a matching build.
+

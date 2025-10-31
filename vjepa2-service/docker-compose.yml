@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  vjepa2-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vjepa2-service:latest
+    container_name: vjepa2-service
+    runtime: nvidia
+    ports:
+      - "8000:8000"
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - PYTHONUNBUFFERED=1
+      - DEBIAN_FRONTEND=noninteractive
+      - TRANSFORMERS_NO_TORCHAO=1
+    volumes:
+      - ${HOME}/.vjepa2-service-data:/workspace
+      - /tmp:/tmp
+    ipc: host
+    shm_size: "16g"
+    restart: unless-stopped
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+

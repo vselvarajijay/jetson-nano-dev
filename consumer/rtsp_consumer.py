@@ -13,6 +13,10 @@ import threading
 import time
 import logging
 import sys
+import os
+import base64
+import requests
+from collections import deque
 
 gi.require_version("Gst", "1.0")
 from gi.repository import Gst, GLib
@@ -25,7 +29,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class RTSPConsumer:
-    def __init__(self, rtsp_url):
+    def __init__(self, rtsp_url, vjepa_service_url=None):
         self.rtsp_url = rtsp_url
         self.frame = None
         self.lock = threading.Lock()
@@ -38,6 +42,15 @@ class RTSPConsumer:
         self.last_fps_count = 0
         self.last_frame_time = time.time()
         self.stream_timeout = 5.0  # seconds without frames before considering stream dead
+        
+        # VJEPA2 service integration
+        self.vjepa_service_url = vjepa_service_url or os.getenv(
+            'VJEPA_SERVICE_URL', 
+            'http://localhost:8000'
+        )
+        self.frame_buffer = deque(maxlen=16)  # Store 16 frames for VJEPA2 (frames_per_clip)
+        self.frames_per_clip = 16
+        self.clips_sent = 0
         
     def on_new_sample(self, sink):
         """Callback function for new video samples from GStreamer"""
@@ -81,6 +94,13 @@ class RTSPConsumer:
         if self.start_time is None:
             self.start_time = time.time()
         
+        # Add frame to buffer for VJEPA2 inference
+        self.frame_buffer.append(frame.copy())
+        
+        # When buffer is full, send to VJEPA2 service
+        if len(self.frame_buffer) == self.frames_per_clip:
+            self.send_clip_to_vjepa()
+        
         # Convert to grayscale for analysis
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         
@@ -100,8 +120,72 @@ class RTSPConsumer:
                            f"Size: {frame.shape[1]}x{frame.shape[0]} | "
                            f"FPS: {fps:5.1f} | "
                            f"Intensity: μ={mean_intensity:.2f} σ={std_intensity:.2f} "
-                           f"[{min_intensity:.0f}-{max_intensity:.0f}]")
+                           f"[{min_intensity:.0f}-{max_intensity:.0f}] | "
+                           f"Clips: {self.clips_sent}")
             sys.stdout.flush()
+    
+    def send_clip_to_vjepa(self):
+        """Send batched clip to vjepa2-service (non-blocking)"""
+        if not self.vjepa_service_url:
+            return
+        
+        # Copy frames from buffer (in case buffer is modified during encoding)
+        frames_to_send = list(self.frame_buffer)
+        
+        def send_async():
+            """Send clip in background thread to avoid blocking pipeline"""
+            try:
+                # Encode frames to base64 JPEG
+                frames_b64 = []
+                for frame in frames_to_send:
+                    # Encode frame as JPEG then base64
+                    success, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 95])
+                    if not success:
+                        logger.warning("Failed to encode frame to JPEG")
+                        continue
+                    frame_b64 = base64.b64encode(buffer).decode('utf-8')
+                    frames_b64.append(frame_b64)
+                
+                if len(frames_b64) != self.frames_per_clip:
+                    logger.warning(f"Expected {self.frames_per_clip} frames, got {len(frames_b64)}")
+                    return
+                
+                # Send to service
+                response = requests.post(
+                    f"{self.vjepa_service_url}/api/v1/infer",
+                    json={
+                        "frames": frames_b64,
+                        "width": frames_to_send[0].shape[1],
+                        "height": frames_to_send[0].shape[0],
+                        "format": "BGR"
+                    },
+                    timeout=10.0
+                )
+                
+                if response.status_code == 200:
+                    results = response.json()
+                    predictions = results.get('predictions', [])
+                    if predictions:
+                        top_pred = predictions[0]
+                        logger.info(
+                            f"VJEPA2 Prediction: {top_pred.get('label', 'unknown')} "
+                            f"({top_pred.get('confidence', 0.0):.2f})"
+                        )
+                    self.clips_sent += 1
+                else:
+                    logger.warning(
+                        f"VJEPA2 service returned status {response.status_code}: "
+                        f"{response.text[:200]}"
+                    )
+                    
+            except requests.exceptions.RequestException as e:
+                logger.warning(f"Failed to send clip to VJEPA2 service: {e}")
+            except Exception as e:
+                logger.error(f"Error in send_clip_to_vjepa: {e}", exc_info=True)
+        
+        # Run in background thread to avoid blocking pipeline
+        thread = threading.Thread(target=send_async, daemon=True)
+        thread.start()
     
     def bus_call(self, bus, message, loop):
         """Handle GStreamer bus messages"""
