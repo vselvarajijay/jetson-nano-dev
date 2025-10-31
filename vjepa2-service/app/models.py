@@ -18,7 +18,7 @@ class Prediction(BaseModel):
 
 class PredictionResponse(BaseModel):
     """Response model for inference results"""
-    predictions: List[Dict[str, float]]  # List of {"label": str, "confidence": float}
+    predictions: List[Prediction]  # List of Prediction objects with label and confidence
     clip_id: Optional[str] = None
 
 

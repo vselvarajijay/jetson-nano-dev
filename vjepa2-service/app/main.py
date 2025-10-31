@@ -6,7 +6,7 @@ import logging
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
-from app.models import InferenceRequest, PredictionResponse, HealthResponse
+from app.models import InferenceRequest, PredictionResponse, HealthResponse, Prediction
 from app.inference import VJEPAInferenceEngine
 
 # Configure logging
@@ -96,7 +96,10 @@ async def infer(request: InferenceRequest):
                 )
         
         # Run inference
-        predictions = engine.predict(frames, top_k=5)
+        predictions_dict = engine.predict(frames, top_k=5)
+        
+        # Convert dictionaries to Prediction objects
+        predictions = [Prediction(**pred) for pred in predictions_dict]
         
         # Generate clip ID
         clip_id = str(uuid.uuid4())

@@ -17,7 +17,7 @@ services:
       - DEBIAN_FRONTEND=noninteractive
       - TRANSFORMERS_NO_TORCHAO=1
     volumes:
-      - ${HOME}/.vjepa2-service-data:/workspace
+      - ${HOME}/.vjepa2-service-data:/workspace/data
       - /tmp:/tmp
     ipc: host
     shm_size: "16g"

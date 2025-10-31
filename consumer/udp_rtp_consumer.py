@@ -29,7 +29,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class UDPRTPConsumer:
-    def __init__(self, url):
+    def __init__(self, url, vjepa_service_url=None):
         self.url = url
         self.frame = None
         self.lock = threading.Lock()
@@ -135,6 +135,21 @@ class UDPRTPConsumer:
         def send_async():
             """Send clip in background thread to avoid blocking pipeline"""
             try:
+                # Quick health check first (non-blocking)
+                try:
+                    health_response = requests.get(
+                        f"{self.vjepa_service_url}/health",
+                        timeout=2.0
+                    )
+                    if health_response.status_code == 200:
+                        health_data = health_response.json()
+                        if not health_data.get('model_loaded', False):
+                            # Model still loading, skip this request
+                            return
+                except requests.exceptions.RequestException:
+                    # Service might not be ready yet, skip this request
+                    return
+                
                 # Encode frames to base64 JPEG
                 frames_b64 = []
                 for frame in frames_to_send:
@@ -150,36 +165,54 @@ class UDPRTPConsumer:
                     logger.warning(f"Expected {self.frames_per_clip} frames, got {len(frames_b64)}")
                     return
                 
-                # Send to service
-                response = requests.post(
-                    f"{self.vjepa_service_url}/api/v1/infer",
-                    json={
-                        "frames": frames_b64,
-                        "width": frames_to_send[0].shape[1],
-                        "height": frames_to_send[0].shape[0],
-                        "format": "BGR"
-                    },
-                    timeout=10.0
-                )
-                
-                if response.status_code == 200:
-                    results = response.json()
-                    predictions = results.get('predictions', [])
-                    if predictions:
-                        top_pred = predictions[0]
-                        logger.info(
-                            f"VJEPA2 Prediction: {top_pred.get('label', 'unknown')} "
-                            f"({top_pred.get('confidence', 0.0):.2f})"
+                # Send to service with retry logic
+                max_retries = 2
+                for attempt in range(max_retries):
+                    try:
+                        response = requests.post(
+                            f"{self.vjepa_service_url}/api/v1/infer",
+                            json={
+                                "frames": frames_b64,
+                                "width": frames_to_send[0].shape[1],
+                                "height": frames_to_send[0].shape[0],
+                                "format": "BGR"
+                            },
+                            timeout=15.0
                         )
-                    self.clips_sent += 1
-                else:
-                    logger.warning(
-                        f"VJEPA2 service returned status {response.status_code}: "
-                        f"{response.text[:200]}"
-                    )
+                        
+                        if response.status_code == 200:
+                            results = response.json()
+                            predictions = results.get('predictions', [])
+                            if predictions:
+                                top_pred = predictions[0]
+                                logger.info(
+                                    f"VJEPA2 Prediction: {top_pred.get('label', 'unknown')} "
+                                    f"({top_pred.get('confidence', 0.0):.2f})"
+                                )
+                            self.clips_sent += 1
+                            break  # Success, exit retry loop
+                        elif response.status_code == 503:
+                            # Service not ready, skip retries
+                            return
+                        else:
+                            if attempt < max_retries - 1:
+                                time.sleep(0.5)  # Brief wait before retry
+                                continue
+                            logger.warning(
+                                f"VJEPA2 service returned status {response.status_code}: "
+                                f"{response.text[:200]}"
+                            )
+                            break
+                    except requests.exceptions.RequestException as e:
+                        if attempt < max_retries - 1:
+                            time.sleep(0.5)  # Brief wait before retry
+                            continue
+                        # Last attempt failed, log and give up
+                        # Only log if it's not a connection reset (service might be loading)
+                        if "Connection reset" not in str(e) and "Connection aborted" not in str(e):
+                            logger.warning(f"Failed to send clip to VJEPA2 service: {e}")
+                        return
                     
-            except requests.exceptions.RequestException as e:
-                logger.warning(f"Failed to send clip to VJEPA2 service: {e}")
             except Exception as e:
                 logger.error(f"Error in send_clip_to_vjepa: {e}", exc_info=True)
         
