@@ -1,0 +1,7 @@
+transformers[video]==4.57.1
+huggingface-hub
+tokenizers
+safetensors
+av
+numpy
+# NOTE: Do NOT pin torchvision here; the NGC image already includes a matching build.
