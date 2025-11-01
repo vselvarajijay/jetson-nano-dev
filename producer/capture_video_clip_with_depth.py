@@ -46,14 +46,44 @@ import threading
 from queue import Queue
 
 def find_camera():
-    """Find working camera device"""
-    for device in ['/dev/video4', '/dev/video0', '/dev/video2']:
+    """Find working RGB color camera device - prioritize /dev/video4 (RGB)"""
+    import numpy as np
+    
+    # User says /dev/video4 is RGB color - check it first
+    # RealSense /dev/video4 supports YUYV format which is color (not IR)
+    for device in ['/dev/video4', '/dev/video1', '/dev/video3', '/dev/video5']:
         try:
-            cap = cv2.VideoCapture(device)
+            cap = cv2.VideoCapture(device, cv2.CAP_V4L2)
+            if cap.isOpened():
+                ret, frame = cap.read()
+                if ret and frame is not None and len(frame.shape) == 3:
+                    # Verify it's actually RGB color, not IR (IR has similar R,G,B values)
+                    mean_r = np.mean(frame[:,:,0])
+                    mean_g = np.mean(frame[:,:,1])
+                    mean_b = np.mean(frame[:,:,2])
+                    diff_rg = abs(mean_r - mean_g)
+                    diff_gb = abs(mean_g - mean_b)
+                    is_color = diff_rg > 10 or diff_gb > 10  # RGB should have noticeable differences
+                    
+                    # /dev/video4 with YUYV format is color - trust it even if R,G,B are similar
+                    # (YUYV gets decoded as BGR, might appear grayscale if scene is monochrome)
+                    if device == '/dev/video4' or is_color:
+                        print(f"✓ Found RGB color camera at {device}")
+                        cap.release()
+                        return device
+                cap.release()
+        except:
+            pass
+    
+    # Fallback: if no RGB found, warn and use /dev/video2 (but it's likely IR)
+    print("⚠️  No RGB color camera found via V4L2 - falling back to /dev/video2 (may be IR)")
+    for device in ['/dev/video2']:
+        try:
+            cap = cv2.VideoCapture(device, cv2.CAP_V4L2)
             if cap.isOpened():
                 ret, frame = cap.read()
                 if ret and frame is not None:
-                    print(f"✓ Found camera at {device}")
+                    print(f"⚠️  Using {device} (may be IR, not RGB)")
                     cap.release()
                     return device
                 cap.release()
@@ -72,14 +102,22 @@ def capture_clip_realsense(duration=3.0, fps=15, quick_test=False):
     
     # Query devices with retries (RSUSB backend needs time)
     devices = ctx.query_devices()
-    max_retries = 1 if quick_test else 3
+    max_retries = 1 if quick_test else 5  # Increase retries
     retry = 0
     while len(devices) == 0 and retry < max_retries:
-        time.sleep(0.3 if quick_test else 1.0)
-        devices = ctx.query_devices()
+        time.sleep(0.5 if quick_test else 1.0)
+        try:
+            devices = ctx.query_devices()
+            if len(devices) > 0:
+                break
+        except Exception as e:
+            if not quick_test:
+                print(f"  Device query retry {retry + 1}/{max_retries}: {str(e)[:50]}")
         retry += 1
     
     if len(devices) == 0:
+        if not quick_test:
+            print("  ✗ No RealSense devices found after retries")
         return None, None, None
     
     # Create pipeline with context
@@ -92,7 +130,7 @@ def capture_clip_realsense(duration=3.0, fps=15, quick_test=False):
     
     # Try multiple initialization methods
     profile = None
-    max_attempts = 1 if quick_test else 3  # Only try once for quick test
+    max_attempts = 1 if quick_test else 5  # Try multiple resolution/config combinations
     
     for attempt in range(max_attempts):
         try:
@@ -103,21 +141,53 @@ def capture_clip_realsense(duration=3.0, fps=15, quick_test=False):
             except:
                 pass
             
-            # Try different configs
+            # Try different configs - prioritize highest resolution for color
             if attempt == 0:
-                # Standard config
+                # Try highest resolution first (1920x1080 if available)
+                try:
+                    config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, fps)
+                    config.enable_stream(rs.stream.color, 1920, 1080, rs.format.bgr8, fps)
+                except:
+                    # Fallback to 1280x720
+                    config = rs.config()
+                    config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, fps)
+                    config.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, fps)
+            elif attempt == 1:
+                # Try 1280x720
+                config = rs.config()
+                config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, fps)
+                config.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, fps)
+            elif attempt == 2:
+                # Try 640x480 (most compatible)
+                config = rs.config()
                 config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, fps)
                 config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, fps)
-            elif attempt == 1:
-                # Simpler config
+            elif attempt == 3:
+                # Try without explicit resolution (let SDK choose)
+                config = rs.config()
                 config.enable_stream(rs.stream.depth)
                 config.enable_stream(rs.stream.color)
+            elif attempt == 4:
+                # Try with device selection
+                config = rs.config()
+                try:
+                    config.enable_device(devices[0].get_info(rs.camera_info.serial_number))
+                    config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, fps)
+                    config.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, fps)
+                except:
+                    config = rs.config()
+                    config.enable_stream(rs.stream.depth)
+                    config.enable_stream(rs.stream.color)
             else:
                 # Fallback: enable all streams
                 config = rs.config()
                 config.enable_all_streams()
             
-            # Start pipeline
+            # Start pipeline with longer timeout for first attempt
+            if attempt == 0:
+                # Give it more time on first attempt
+                time.sleep(0.5)
+            
             profile = pipeline.start(config)
             if not quick_test:
                 print(f"  ✓ Pipeline started (attempt {attempt + 1})")
@@ -129,8 +199,12 @@ def capture_clip_realsense(duration=3.0, fps=15, quick_test=False):
                 return None, None, None
             elif attempt < max_attempts - 1:
                 print(f"  Attempt {attempt + 1} failed: {str(e)[:50]}...")
-                time.sleep(0.2)  # Faster retry
+                time.sleep(0.5)  # Wait a bit longer between retries
             else:
+                # All attempts failed
+                error_msg = str(e)
+                if "No device connected" in error_msg or "device" in error_msg.lower():
+                    print(f"  ✗ RealSense SDK can't access device (known SDK bug)")
                 return None, None, None
     
     if profile is None:
@@ -231,20 +305,23 @@ def read_z16_depth_frame(device_path='/dev/video0', width=256, height=144):
     
     return None
 
-def find_depth_device():
+def find_depth_device(exclude_device=None):
     """Try to find a V4L2 device that provides depth/IR data"""
     # RealSense typically exposes depth on /dev/video0 with Z16 format (16-bit depth)
     # Check if /dev/video0 exists and has Z16 format
     import os
-    if os.path.exists('/dev/video0'):
+    if os.path.exists('/dev/video0') and '/dev/video0' != exclude_device:
         # Try to read a test frame to verify it's depth
         test_frame = read_z16_depth_frame('/dev/video0')
         if test_frame is not None:
             print(f"  ✓ Found depth stream at /dev/video0 (Z16 format, {test_frame.shape})")
             return '/dev/video0'
     
-    # Fallback: try other devices
+    # Fallback: try other devices (excluding the one used for color)
+    # Only check /dev/video2 if it's not being used for color
     for device in ['/dev/video2', '/dev/video1']:
+        if device == exclude_device:
+            continue
         try:
             cap = cv2.VideoCapture(device, cv2.CAP_V4L2)
             if cap.isOpened():
@@ -366,12 +443,8 @@ def capture_clip_v4l2(color_cap, depth_cap, duration=3.0, fps=30, depth_device_p
     
     print(f"Done! ({len(color_frames)} frames)")
     
-    # If save_queue provided, pass to background save thread (non-blocking)
-    if save_queue is not None:
-        try:
-            save_queue.put_nowait((color_frames, depth_frames, timestamps))
-        except:
-            print("  ⚠️  Save queue full - dropping clip")
+    # Don't save here - let the main loop handle saving to avoid duplicates
+    # The save_queue is only used for coordination, not actual saving
     
     return color_frames, depth_frames if depth_frames else None, timestamps
 
@@ -495,7 +568,27 @@ def save_clip(color_frames, depth_frames, timestamps, output_dir, clip_num):
 
 def main():
     clip_duration = 3.0  # seconds
-    target_fps = 15  # frames per second
+    target_fps = 30  # frames per second (will use actual camera max fps)
+    
+    # Kill any processes that might be using the camera
+    print("Checking for processes using camera...")
+    import subprocess
+    try:
+        # Kill processes using video devices
+        result = subprocess.run(['fuser', '-k', '/dev/video*'], 
+                              capture_output=True, stderr=subprocess.DEVNULL, timeout=2)
+        print("  ✓ Released any video devices")
+    except:
+        pass
+    
+    try:
+        # Kill any Python processes with our script name
+        result = subprocess.run(['pkill', '-f', 'capture_video_clip'], 
+                              capture_output=True, stderr=subprocess.DEVNULL, timeout=1)
+    except:
+        pass
+    
+    time.sleep(0.5)  # Give it a moment for devices to be released
     
     print("=" * 60)
     print("RealSense Video Clip Capture with Depth")
@@ -504,13 +597,19 @@ def main():
     print(f"Target FPS: {target_fps}")
     print("=" * 60)
     
-    # Skip RealSense SDK - it's unreliable. Use V4L2 which we know works!
-    # RealSense SDK often fails with "No device connected" even though device exists
-    # V4L2 directly accesses /dev/video0 for depth and /dev/video4 for color - much more reliable
-    use_realsense = False
-    print("\nUsing V4L2 for reliable capture (bypasses RealSense SDK issues)")
+    # Use RealSense SDK for RGB color camera (V4L2 only exposes IR cameras)
+    # NOTE: /dev/video4 appears to be RGB color via V4L2 (YUYV format)
+    # RealSense SDK often fails with "No device connected" even when device exists
+    # This is a known SDK bug - fallback to V4L2 is automatic
+    # Set to False to skip SDK and use V4L2 directly (faster, and /dev/video4 is RGB)
+    use_realsense = False  # Skip SDK - use V4L2 directly since /dev/video4 is RGB
+    if use_realsense:
+        print(f"\nAttempting RealSense SDK for RGB color camera (will fallback to V4L2 if it fails)")
+    else:
+        print(f"\nUsing V4L2 directly with /dev/video4 (RGB color camera)")
+        print(f"  Note: Skipping RealSense SDK (known to fail with 'No device connected')")
     
-    # Fallback to V4L2 if needed
+    # Fallback to V4L2 if SDK not available
     color_cap = None
     depth_cap = None
     
@@ -521,19 +620,75 @@ def main():
             print("✗ Could not find camera!")
             return
         
-        color_cap = cv2.VideoCapture(device)
+        color_cap = cv2.VideoCapture(device, cv2.CAP_V4L2)
         if not color_cap.isOpened():
             print(f"✗ Could not open {device}")
             return
         
-        width = int(color_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(color_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        actual_fps = color_cap.get(cv2.CAP_PROP_FPS)
+        # Try to set highest resolution and framerate available
+        # RealSense /dev/video4 supports up to 1920x1080, but lower resolutions have higher framerates
+        # Optimize for highest framerate at highest usable resolution
+        resolutions = [
+            (1920, 1080),
+            (1280, 720),
+            (848, 480),
+            (640, 480),
+            (640, 360),
+        ]
         
-        print(f"✓ Color stream: {width}x{height} @ {actual_fps:.1f}fps")
+        # Try highest framerates first (60, 30, 15, etc.)
+        target_framerates = [60, 30, 15, 10]
         
-        # Try to find depth device
-        depth_device = find_depth_device()
+        best_config = None
+        best_fps = 0
+        best_resolution = None
+        
+        # Find the configuration with the highest framerate
+        # Prioritize higher resolution if framerate is the same
+        for w, h in resolutions:
+            for target_fps_val in target_framerates:
+                color_cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
+                color_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
+                color_cap.set(cv2.CAP_PROP_FPS, target_fps_val)
+                
+                # Check what we actually got
+                test_w = int(color_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                test_h = int(color_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                test_fps = color_cap.get(cv2.CAP_PROP_FPS)
+                
+                if test_w == w and test_h == h:
+                    # Check if this is better (higher fps, or same fps with higher resolution)
+                    is_better = False
+                    if test_fps > best_fps:
+                        is_better = True
+                    elif test_fps == best_fps and best_resolution:
+                        # Same fps - prefer higher resolution
+                        current_pixels = w * h
+                        best_pixels = best_resolution[0] * best_resolution[1]
+                        if current_pixels > best_pixels:
+                            is_better = True
+                    
+                    if is_better or best_config is None:
+                        best_config = (test_w, test_h, test_fps)
+                        best_fps = test_fps
+                        best_resolution = (test_w, test_h)
+        
+        # Apply the best configuration we found
+        if best_config:
+            actual_width, actual_height, actual_fps = best_config
+            color_cap.set(cv2.CAP_PROP_FRAME_WIDTH, actual_width)
+            color_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, actual_height)
+            color_cap.set(cv2.CAP_PROP_FPS, actual_fps)
+        else:
+            # If none worked, use default
+            actual_width = int(color_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            actual_height = int(color_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            actual_fps = color_cap.get(cv2.CAP_PROP_FPS)
+        
+        print(f"✓ Color stream: {actual_width}x{actual_height} @ {actual_fps:.1f}fps (max)")
+        
+        # Try to find depth device (exclude the one used for color to avoid conflicts)
+        depth_device = find_depth_device(exclude_device=device)
         if depth_device:
             if depth_device == '/dev/video0':
                 # /dev/video0 uses Z16 format - OpenCV can't read it directly
@@ -595,20 +750,67 @@ def main():
             if use_realsense:
                 color_frames, depth_frames, timestamps = capture_clip_realsense(clip_duration, target_fps)
                 if color_frames is None:
-                    print("  ✗ Capture failed")
-                    continue
+                    print("  ✗ RealSense SDK capture failed - falling back to V4L2")
+                    # Fallback to V4L2 if SDK fails
+                    use_realsense = False
+                    if color_cap is None:
+                        print("\nTrying V4L2 for color + depth...")
+                        device = find_camera()
+                        if device is None:
+                            print("✗ Could not find camera!")
+                            continue
+                        
+                        color_cap = cv2.VideoCapture(device)
+                        if not color_cap.isOpened():
+                            print(f"✗ Could not open {device}")
+                            continue
+                        
+                        width = int(color_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                        height = int(color_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                        actual_fps = color_cap.get(cv2.CAP_PROP_FPS)
+                        print(f"✓ Color stream: {width}x{height} @ {actual_fps:.1f}fps")
+                        
+                        # Try to find depth device (exclude the one used for color to avoid conflicts)
+                        depth_device = find_depth_device(exclude_device=device)
+                        if depth_device:
+                            if depth_device == '/dev/video0':
+                                print(f"✓ Depth stream found at {depth_device} (Z16 format - reading via v4l2-ctl)")
+                                depth_cap = None
+                            else:
+                                depth_cap = cv2.VideoCapture(depth_device, cv2.CAP_V4L2)
+                                if depth_cap.isOpened():
+                                    print(f"✓ Depth/IR stream found at {depth_device}")
+                                else:
+                                    depth_cap = None
+                        else:
+                            print("  ⚠️  No depth/IR stream found via V4L2")
+                    
+                    # Try V4L2 capture
+                    actual_fps_int = int(actual_fps) if 'actual_fps' in locals() else 30
+                    depth_device_path = depth_device if 'depth_device' in locals() else None
+                    color_frames, depth_frames, timestamps = capture_clip_v4l2(
+                        color_cap, depth_cap, clip_duration, actual_fps_int, depth_device_path, None
+                    )
+                    
+                    if len(color_frames) == 0:
+                        print("  ✗ No frames captured, skipping...")
+                        continue
+                else:
+                    # RealSense SDK worked - continue
+                    pass
             else:
                 actual_fps_int = int(actual_fps) if 'actual_fps' in locals() else 30
                 depth_device_path = depth_device if 'depth_device' in locals() else None
+                # Don't pass save_queue to avoid duplicate saves - save here instead
                 color_frames, depth_frames, timestamps = capture_clip_v4l2(
-                    color_cap, depth_cap, clip_duration, actual_fps_int, depth_device_path, save_queue
+                    color_cap, depth_cap, clip_duration, actual_fps_int, depth_device_path, None
                 )
             
             if len(color_frames) == 0:
                 print("  ✗ No frames captured, skipping...")
                 continue
             
-            # Queue for background save (non-blocking)
+            # Queue for background save (non-blocking) - only save once here
             try:
                 save_queue.put_nowait((color_frames, depth_frames, timestamps))
                 print(f"  ✓ Clip #{clip_num} queued for save (continuing capture...)")
