@@ -550,12 +550,13 @@ def main():
         else:
             print("  ⚠️  No depth/IR stream found via V4L2")
     
-    # Create output directory
+    # Create output directory with timestamp
+    base_dir = ".videos"
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_base = f"{timestamp}_clips"
+    output_base = os.path.join(base_dir, timestamp)
     os.makedirs(output_base, exist_ok=True)
     
-    print(f"\nOutput directory: {output_base}")
+    print(f"\nOutput directory: {output_base}/")
     print("Press Ctrl+C to stop\n")
     
     # Background thread for saving clips (non-blocking)
